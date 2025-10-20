@@ -2,6 +2,7 @@ import {useEffect, useRef} from "react";
 
 export function Sketch({code}) {
   const sketchRef = useRef(null);
+
   useEffect(() => {
     if (!sketchRef.current) return;
     sketchRef.current.innerHTML = "";
@@ -38,5 +39,6 @@ export function Sketch({code}) {
     iframe.style.height = "100%";
     iframe.style.border = "none";
   }, [code]);
+
   return <div ref={sketchRef} className="w-full h-full" />;
 }

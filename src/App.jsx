@@ -12,6 +12,11 @@ const initialCode = `function setup() {
 
 function App() {
   const [code, setCode] = useState(initialCode);
+
+  function onSave(code) {
+    setCode(code);
+  }
+
   return (
     <div className="min-h-screen">
       <header className="h-[64px]">
@@ -20,7 +25,7 @@ function App() {
       <main className="flex h-[calc(100vh-64px)]">
         <div className="w-1/2 h-full">
           <div className="h-1/2">
-            <Editor code={code} setCode={setCode} />
+            <Editor code={code} onSave={onSave} />
           </div>
           <div className="h-1/2">
             <Sketch code={code} />
