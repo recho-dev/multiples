@@ -22,23 +22,53 @@ export function Sketch({code}) {
         body {
           margin: 0;
           padding: 0;
+          overflow: hidden;
         }
         canvas {
           margin: 0;
           padding: 0;
+          display: block;
         }
       </style>
       <body>
         <script>
       ${code}
         </script>
+        <script>
+          // Resize iframe to match canvas size
+          window.addEventListener('load', () => {
+            setTimeout(() => {
+              const canvas = document.querySelector('canvas');
+              if (canvas) {
+                window.parent.postMessage({
+                  type: 'resize',
+                  width: +canvas.style.width.replace('px', ''),
+                  height: +canvas.style.height.replace('px', '')
+                }, '*');
+              }
+            }, 100);
+          });
+        </script>
       </body>
     </html>`);
     doc.close();
-    iframe.style.width = "100%";
-    iframe.style.height = "100%";
     iframe.style.border = "none";
+    iframe.style.display = "block";
+
+    // Listen for resize messages from iframe
+    const handleMessage = (event) => {
+      if (event.data.type === "resize") {
+        iframe.style.width = event.data.width + "px";
+        iframe.style.height = event.data.height + "px";
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
   }, [code]);
 
-  return <div ref={sketchRef} className="w-full h-full" />;
+  return <div ref={sketchRef} />;
 }

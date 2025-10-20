@@ -2,7 +2,7 @@ import "./App.css";
 import {useState} from "react";
 import {Editor} from "./Editor.jsx";
 import {Sketch} from "./Sketch.jsx";
-import {Multiples} from "./Multiples.jsx";
+// import {Multiples} from "./Multiples.jsx";
 
 const initialCode = `function setup() {
   createCanvas(200, 200);
@@ -24,15 +24,11 @@ function App() {
       </header>
       <main className="flex h-[calc(100vh-64px)]">
         <div className="w-1/2 h-full">
-          <div className="h-1/2">
-            <Editor code={code} onSave={onSave} />
-          </div>
-          <div className="h-1/2">
-            <Sketch code={code} />
-          </div>
+          <Editor code={code} onSave={onSave} />
         </div>
         <div className="w-1/2 h-full">
-          <Multiples code={code} />
+          <Sketch code={code} />
+          {/* <Multiples code={code} /> */}
         </div>
       </main>
     </div>
