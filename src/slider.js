@@ -66,6 +66,7 @@ function createSliderPopup(view, number, onChange, onClose) {
 
   const currentValue = parseFloat(number.value);
   let [min, max] = [0, currentValue * 2];
+  if (currentValue === 0) [min, max] = [0, 100];
   if (min > max) [min, max] = [max, min];
 
   slider.min = min;

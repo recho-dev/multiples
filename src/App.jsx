@@ -4,11 +4,11 @@ import {Editor} from "./Editor.jsx";
 import {Sketch} from "./Sketch.jsx";
 // import {Multiples} from "./Multiples.jsx";
 
-const initialCode = `function setup() {
-  createCanvas(200, 200);
-  background(0);
-  circle(100, 100, 50);
-}`;
+const initialCode = `p.setup = () => {
+  p.createCanvas(200, 200);
+  p.background(0);
+  p.circle(100, 100, 50);
+};`;
 
 function App() {
   const [code, setCode] = useState(initialCode);
