@@ -1,5 +1,5 @@
 {
-  "name": "recho-mutiples",
+  "name": "recho-multiples",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,9 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.9.0",
     "@codemirror/lang-javascript": "^6.2.4",
+    "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.38.5",
     "codemirror": "^6.0.2",
+    "p5": "^2.0.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

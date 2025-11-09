@@ -1,17 +1,26 @@
 import "./App.css";
-import {useState} from "react";
+import {useState, useCallback} from "react";
 import {Editor} from "./Editor.jsx";
 import {Sketch} from "./Sketch.jsx";
-import {Multiples} from "./Multiples.jsx";
+// import {Multiples} from "./Multiples.jsx";
 
-const initialCode = `function setup() {
-  createCanvas(200, 200);
-  background(0);
-  circle(100, 100, 50);
-}`;
+const initialCode = `p.setup = () => {
+  p.createCanvas(200, 200);
+  p.background(0);
+  p.circle(100, 100, 50);
+};`;
 
 function App() {
   const [code, setCode] = useState(initialCode);
+
+  const onSave = useCallback((code) => {
+    setCode(code);
+  }, []);
+
+  const onSliderChange = useCallback((code) => {
+    setCode(code);
+  }, []);
+
   return (
     <div className="min-h-screen">
       <header className="h-[64px]">
@@ -19,15 +28,11 @@ function App() {
       </header>
       <main className="flex h-[calc(100vh-64px)]">
         <div className="w-1/2 h-full">
-          <div className="h-1/2">
-            <Editor code={code} setCode={setCode} />
-          </div>
-          <div className="h-1/2">
-            <Sketch code={code} />
-          </div>
+          <Editor code={code} onSave={onSave} onSliderChange={onSliderChange} />
         </div>
         <div className="w-1/2 h-full">
-          <Multiples code={code} />
+          <Sketch code={code} />
+          {/* <Multiples code={code} /> */}
         </div>
       </main>
     </div>

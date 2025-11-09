@@ -1,12 +1,37 @@
 import {javascript} from "@codemirror/lang-javascript";
 import {EditorView, basicSetup} from "codemirror";
+import {indentWithTab} from "@codemirror/commands";
+import {keymap} from "@codemirror/view";
+import {numberSlider, ANNO_SLIDER_UPDATE} from "./slider.js";
 
-function createEditor(parent, {initialCode = ""} = {}) {
+function createEditor(parent, {initialCode = "", onSave = () => {}, onSliderChange = () => {}} = {}) {
   const editor = new EditorView({
     parent,
-    extensions: [basicSetup, javascript()],
+    extensions: [
+      basicSetup,
+      javascript(),
+      numberSlider(),
+      keymap.of([
+        {
+          key: "Mod-s",
+          run: handleSave,
+          preventDefault: true,
+        },
+        indentWithTab,
+      ]),
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged && update.transactions.some((tr) => tr.annotation(ANNO_SLIDER_UPDATE))) {
+          onSliderChange(update.state.doc.toString());
+        }
+      }),
+    ],
     doc: initialCode,
   });
+
+  function handleSave(view) {
+    onSave(view.state.doc.toString());
+  }
+
   return {
     editor,
     destroy: () => editor.destroy(),
