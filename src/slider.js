@@ -1,7 +1,8 @@
 import {Decoration, EditorView, ViewPlugin} from "@codemirror/view";
-import {StateField, StateEffect} from "@codemirror/state";
+import {StateField, StateEffect, Annotation} from "@codemirror/state";
 
 const highlightEffect = StateEffect.define();
+const sliderUpdate = Annotation.define();
 
 const highlightField = StateField.define({
   create() {
@@ -121,6 +122,12 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       view.dom.addEventListener("mouseup", this.mouseup);
     }
 
+    update(update) {
+      if (this.popup && update.docChanged && !update.transactions.some((tr) => tr.annotation(sliderUpdate))) {
+        this.closePopup();
+      }
+    }
+
     mousemove(event) {
       if (this.popup) return;
       const pos = this.view.posAtCoords({x: event.clientX, y: event.clientY});
@@ -167,6 +174,7 @@ const numberSliderPlugin = ViewPlugin.fromClass(
             to: this.activeNumber.to,
             insert: formattedValue,
           },
+          annotations: sliderUpdate.of(true),
         });
         const diff = formattedValue.length - this.activeNumber.value.length;
         this.activeNumber.to += diff;
