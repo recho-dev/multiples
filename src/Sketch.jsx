@@ -1,4 +1,4 @@
-import {useEffect, useRef} from "react";
+import {useEffect, useRef, useState} from "react";
 import p5 from "p5";
 
 function evalP5Code(parent, code) {
@@ -9,13 +9,22 @@ function evalP5Code(parent, code) {
 export function Sketch({code}) {
   const sketchRef = useRef(null);
   const p5InstanceRef = useRef(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!sketchRef.current) return;
     sketchRef.current.innerHTML = "";
-    const parent = document.createElement("div");
-    sketchRef.current.appendChild(parent);
-    p5InstanceRef.current = evalP5Code(parent, code);
+    setError(null);
+
+    try {
+      const parent = document.createElement("div");
+      sketchRef.current.appendChild(parent);
+      p5InstanceRef.current = evalP5Code(parent, code);
+    } catch (err) {
+      console.error("Error executing sketch code:", err);
+      setError(err.message || "An error occurred");
+    }
+
     return () => {
       if (p5InstanceRef.current) {
         p5InstanceRef.current.remove();
@@ -24,5 +33,27 @@ export function Sketch({code}) {
     };
   }, [code]);
 
-  return <div ref={sketchRef} />;
+  return (
+    <>
+      <div ref={sketchRef}></div>
+      {error && (
+        <div
+          style={{
+            padding: "16px",
+            margin: "16px",
+            backgroundColor: "#fee",
+            border: "1px solid #fcc",
+            borderRadius: "4px",
+            color: "#c00",
+            fontFamily: "monospace",
+            fontSize: "14px",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}
+        >
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+    </>
+  );
 }
