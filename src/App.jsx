@@ -1,5 +1,5 @@
 import "./App.css";
-import {useState} from "react";
+import {useState, useCallback} from "react";
 import {Editor} from "./Editor.jsx";
 import {Sketch} from "./Sketch.jsx";
 // import {Multiples} from "./Multiples.jsx";
@@ -13,9 +13,13 @@ const initialCode = `function setup() {
 function App() {
   const [code, setCode] = useState(initialCode);
 
-  function onSave(code) {
+  const onSave = useCallback((code) => {
     setCode(code);
-  }
+  }, []);
+
+  const onChange = useCallback((code) => {
+    setCode(code);
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -24,7 +28,7 @@ function App() {
       </header>
       <main className="flex h-[calc(100vh-64px)]">
         <div className="w-1/2 h-full">
-          <Editor code={code} onSave={onSave} />
+          <Editor code={code} onSave={onSave} onChange={onChange} />
         </div>
         <div className="w-1/2 h-full">
           <Sketch code={code} />
