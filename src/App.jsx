@@ -17,7 +17,7 @@ function App() {
     setCode(code);
   }, []);
 
-  const onChange = useCallback((code) => {
+  const onSliderChange = useCallback((code) => {
     setCode(code);
   }, []);
 
@@ -28,7 +28,7 @@ function App() {
       </header>
       <main className="flex h-[calc(100vh-64px)]">
         <div className="w-1/2 h-full">
-          <Editor code={code} onSave={onSave} onChange={onChange} />
+          <Editor code={code} onSave={onSave} onSliderChange={onSliderChange} />
         </div>
         <div className="w-1/2 h-full">
           <Sketch code={code} />

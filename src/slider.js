@@ -2,7 +2,7 @@ import {Decoration, EditorView, ViewPlugin} from "@codemirror/view";
 import {StateField, StateEffect, Annotation} from "@codemirror/state";
 
 const highlightEffect = StateEffect.define();
-const sliderUpdate = Annotation.define();
+export const ANNO_SLIDER_UPDATE = Annotation.define();
 
 const highlightField = StateField.define({
   create() {
@@ -123,7 +123,7 @@ const numberSliderPlugin = ViewPlugin.fromClass(
     }
 
     update(update) {
-      if (this.popup && update.docChanged && !update.transactions.some((tr) => tr.annotation(sliderUpdate))) {
+      if (this.popup && update.docChanged && !update.transactions.some((tr) => tr.annotation(ANNO_SLIDER_UPDATE))) {
         this.closePopup();
       }
     }
@@ -174,7 +174,7 @@ const numberSliderPlugin = ViewPlugin.fromClass(
             to: this.activeNumber.to,
             insert: formattedValue,
           },
-          annotations: sliderUpdate.of(true),
+          annotations: ANNO_SLIDER_UPDATE.of(true),
         });
         const diff = formattedValue.length - this.activeNumber.value.length;
         this.activeNumber.to += diff;

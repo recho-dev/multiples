@@ -2,9 +2,9 @@ import {javascript} from "@codemirror/lang-javascript";
 import {EditorView, basicSetup} from "codemirror";
 import {indentWithTab} from "@codemirror/commands";
 import {keymap} from "@codemirror/view";
-import {numberSlider} from "./slider.js";
+import {numberSlider, ANNO_SLIDER_UPDATE} from "./slider.js";
 
-function createEditor(parent, {initialCode = "", onSave = () => {}, onChange = () => {}} = {}) {
+function createEditor(parent, {initialCode = "", onSave = () => {}, onSliderChange = () => {}} = {}) {
   const editor = new EditorView({
     parent,
     extensions: [
@@ -20,8 +20,8 @@ function createEditor(parent, {initialCode = "", onSave = () => {}, onChange = (
         indentWithTab,
       ]),
       EditorView.updateListener.of((update) => {
-        if (update.docChanged) {
-          onChange(update.state.doc.toString());
+        if (update.docChanged && update.transactions.some((tr) => tr.annotation(ANNO_SLIDER_UPDATE))) {
+          onSliderChange(update.state.doc.toString());
         }
       }),
     ],
