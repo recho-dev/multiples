@@ -72,7 +72,7 @@ function createSliderPopup(view, number, onChange, onClose) {
 
   slider.min = min;
   slider.max = max;
-  slider.step = (max - min) / 10;
+  slider.step = (max - min) / 20;
   slider.value = currentValue;
 
   slider.addEventListener("input", (e) => {
