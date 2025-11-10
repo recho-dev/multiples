@@ -4,13 +4,13 @@ import {indentWithTab} from "@codemirror/commands";
 import {keymap} from "@codemirror/view";
 import {numberSlider, ANNO_SLIDER_UPDATE} from "./slider.js";
 
-function createEditor(parent, {initialCode = "", onSave = () => {}, onSliderChange = () => {}} = {}) {
+function createEditor(parent, {initialCode = "", onSave = () => {}, onSliderChange = () => {}, onParamsChange = () => {}} = {}) {
   const editor = new EditorView({
     parent,
     extensions: [
       basicSetup,
       javascript(),
-      numberSlider(),
+      numberSlider(onParamsChange),
       keymap.of([
         {
           key: "Mod-s",
