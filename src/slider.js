@@ -1,8 +1,9 @@
 import {Decoration, EditorView, ViewPlugin} from "@codemirror/view";
-import {StateField, StateEffect, Annotation} from "@codemirror/state";
+import {StateField, StateEffect, Annotation, Facet} from "@codemirror/state";
 
 const highlightEffect = StateEffect.define();
 export const ANNO_SLIDER_UPDATE = Annotation.define();
+const paramsFacet = Facet.define({combine: (values) => values[0] || (() => {})});
 
 const highlightField = StateField.define({
   create() {
@@ -48,7 +49,7 @@ function findNumberAt(view, pos) {
   return null;
 }
 
-function createSliderPopup(view, number, onChange, onClose) {
+function createSliderPopup(number, onChange, onClose, onCheckboxChange, isChecked) {
   const popup = document.createElement("div");
   popup.className = "cm-number-slider-popup";
 
@@ -72,7 +73,7 @@ function createSliderPopup(view, number, onChange, onClose) {
 
   slider.min = min;
   slider.max = max;
-  slider.step = (max - min) / 10;
+  slider.step = (max - min) / 20;
   slider.value = currentValue;
 
   slider.addEventListener("input", (e) => {
@@ -98,8 +99,30 @@ function createSliderPopup(view, number, onChange, onClose) {
   closeButton.textContent = "×";
   closeButton.addEventListener("click", onClose);
 
+  const checkboxContainer = document.createElement("div");
+  checkboxContainer.className = "cm-slider-checkbox-container";
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.id = "show-details-checkbox";
+  checkbox.className = "cm-slider-checkbox";
+  checkbox.checked = isChecked;
+
+  const label = document.createElement("label");
+  label.htmlFor = "show-details-checkbox";
+  label.textContent = "Show in multiples";
+  label.className = "cm-slider-checkbox-label";
+
+  checkbox.addEventListener("change", (e) => {
+    onCheckboxChange(e.target.checked);
+  });
+
+  checkboxContainer.appendChild(checkbox);
+  checkboxContainer.appendChild(label);
+
   container.appendChild(valueDisplay);
   container.appendChild(slider);
+  container.appendChild(checkboxContainer);
   popup.appendChild(container);
   popup.appendChild(closeButton);
 
@@ -114,6 +137,8 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       this.popup = null;
       this.activeNumber = null;
       this.mouseDownPos = null;
+      this.paramByPos = new Map();
+      this.onParamsChange = view.state.facet(paramsFacet);
       this.mousemove = this.mousemove.bind(this);
       this.mousedown = this.mousedown.bind(this);
       this.mouseup = this.mouseup.bind(this);
@@ -183,9 +208,18 @@ const numberSliderPlugin = ViewPlugin.fromClass(
 
       const onClose = () => this.closePopup();
 
-      this.popup = createSliderPopup(this.view, number, onChange, onClose);
+      const onCheckboxChange = (checked) => {
+        const key = `${number.from}:${number.to}`;
+        const param = {from: number.from, to: number.to, value: number.value};
+        if (checked) this.paramByPos.set(key, param);
+        else this.paramByPos.delete(key);
+        this.onParamsChange(Array.from(this.paramByPos.values()));
+      };
 
-      // Position the popup
+      const key = `${number.from}:${number.to}`;
+      const isChecked = this.paramByPos.has(key);
+      this.popup = createSliderPopup(number, onChange, onClose, onCheckboxChange, isChecked);
+
       const {left, top, right, bottom} = this.view.coordsAtPos(number.from);
       const bbox = this.view.dom.parentElement.getBoundingClientRect();
       const bboxLeft = bbox.left;
@@ -278,8 +312,24 @@ const sliderStyles = EditorView.theme({
       color: "#333",
     },
   },
+  ".cm-slider-checkbox-container": {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    marginTop: "4px",
+  },
+  ".cm-slider-checkbox": {
+    cursor: "pointer",
+    width: "16px",
+    height: "16px",
+  },
+  ".cm-slider-checkbox-label": {
+    cursor: "pointer",
+    fontSize: "14px",
+    userSelect: "none",
+  },
 });
 
-export function numberSlider() {
-  return [highlightField, numberSliderPlugin, sliderStyles];
+export function numberSlider(onParamsChange) {
+  return [highlightField, numberSliderPlugin, sliderStyles, paramsFacet.of(onParamsChange || (() => {}))];
 }

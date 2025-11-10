@@ -1,7 +1,7 @@
 import {useRef, useEffect} from "react";
 import {createEditor} from "./createEditor.js";
 
-export function Editor({code, onSave, onSliderChange}) {
+export function Editor({code, onSave, onSliderChange, onParamsChange}) {
   const editorRef = useRef(null);
 
   useEffect(() => {
@@ -10,6 +10,7 @@ export function Editor({code, onSave, onSliderChange}) {
       initialCode: code,
       onSave,
       onSliderChange,
+      onParamsChange,
     });
     return () => {
       destroy();
