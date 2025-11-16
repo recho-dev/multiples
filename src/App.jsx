@@ -3,6 +3,7 @@ import {useState, useCallback, useRef, useEffect} from "react";
 import {Sketch} from "./Sketch.jsx";
 import {Multiples} from "./Multiples.jsx";
 import {createEditor} from "./editor/index.js";
+import {clsx} from "./clsx.js";
 
 const initialCode = `let angle = Math.PI / 6;
 
@@ -30,6 +31,7 @@ function branch(len, rotate) {
 function App() {
   const [code, setCode] = useState(initialCode);
   const [params, setParams] = useState([]);
+  const [showMultiples, setShowMultiples] = useState(false);
   const editorRef = useRef(null);
 
   const onSave = useCallback((code) => {
@@ -40,9 +42,10 @@ function App() {
     setCode(code);
   }, []);
 
-  const onParamsChange = useCallback(({params, code}) => {
+  const onParamsChange = useCallback(({params, code, type}) => {
     setParams(params);
     setCode(code);
+    if (type === "params-update") setShowMultiples(params.length > 0);
   }, []);
 
   useEffect(() => {
@@ -60,22 +63,31 @@ function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="h-[64px]">
+      <header className="h-[40px]">
         <h1> Recho Multiples </h1>
       </header>
-      <main className="flex h-[calc(100vh-64px)]">
-        <div className="w-1/3 h-full">
+      <main className="flex h-[calc(100vh-40px)]">
+        <div className="w-1/3 h-full mt-6">
           <div ref={editorRef} />
         </div>
         <div className="w-2/3 h-full overflow-auto">
-          <div>
-            <Sketch code={code} />
+          <div className="flex gap-2 mb-1">
+            <span
+              className={clsx("cursor-pointer", !showMultiples && "border-b-1")}
+              onClick={() => setShowMultiples(false)}
+            >
+              Preview
+            </span>
+            {params.length >= 0 && (
+              <span
+                className={clsx("cursor-pointer", showMultiples && "border-b-1")}
+                onClick={() => setShowMultiples(true)}
+              >
+                Multiples
+              </span>
+            )}
           </div>
-          {params.length > 0 && (
-            <div>
-              <Multiples code={code} params={params} />
-            </div>
-          )}
+          <div>{showMultiples ? <Multiples code={code} params={params} /> : <Sketch code={code} />}</div>
         </div>
       </main>
     </div>

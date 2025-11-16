@@ -100,7 +100,12 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       }
 
       this.params = newParams;
-      this.onParamsChange({params: this.params, code: update.state.doc.toString()});
+
+      this.onParamsChange({
+        params: this.params,
+        code: update.state.doc.toString(),
+        type: "position-update",
+      });
     }
 
     mousedown(event) {
@@ -151,8 +156,14 @@ const numberSliderPlugin = ViewPlugin.fromClass(
         } else {
           this.params = this.params.filter((p) => !(p.from === number.from && p.to === number.to));
         }
+
         this.params = [...this.params];
-        this.onParamsChange({params: this.params, code: this.view.state.doc.toString()});
+
+        this.onParamsChange({
+          params: this.params,
+          code: this.view.state.doc.toString(),
+          type: "params-update",
+        });
       };
 
       const isChecked = this.params.some((p) => p.from === number.from && p.to === number.to);
