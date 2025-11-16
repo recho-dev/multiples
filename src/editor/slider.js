@@ -1,5 +1,7 @@
 import {EditorView, ViewPlugin} from "@codemirror/view";
 import {Annotation, Facet} from "@codemirror/state";
+import {createRuler} from "./ruler.js";
+import {html} from "htl";
 
 // Define a annotation to label the slider change transaction.
 export const ANNO_SLIDER_UPDATE = Annotation.define();
@@ -30,83 +32,95 @@ function findNumberAt(view, pos) {
 }
 
 function createSliderPopup(number, onChange, onClose, onCheckboxChange, isChecked) {
-  const popup = document.createElement("div");
-  popup.className = "cm-number-slider-popup";
-
-  const container = document.createElement("div");
-  container.className = "cm-slider-container";
-
-  const valueDisplay = document.createElement("input");
-  valueDisplay.type = "number";
-  valueDisplay.className = "cm-slider-value";
-  valueDisplay.value = parseFloat(number.value);
-  valueDisplay.step = "any";
-
-  const slider = document.createElement("input");
-  slider.type = "range";
-  slider.className = "cm-slider";
-
   const currentValue = parseFloat(number.value);
   let [min, max] = [0, currentValue * 2];
-  if (currentValue === 0) [min, max] = [0, 100];
+  if (currentValue === 0) [min, max] = [-50, 50];
   if (min > max) [min, max] = [max, min];
 
-  slider.min = min;
-  slider.max = max;
-  slider.step = (max - min) / 20;
-  slider.value = currentValue;
+  const ruler = createRuler({min, max, value: currentValue, width: 200, height: 50, onChange});
+  const handleMouseDown = (event) => event.stopPropagation();
+  // const handleCheckboxChange = (e) => onCheckboxChange(e.target.checked);
+  // <div><label>Show</label><input type="checkbox" checked=${isChecked} onchange=${handleCheckboxChange} /></div>
+  return html`<div class="cm-number-slider-popup" onmousedown=${handleMouseDown}>
+    <div>${ruler}</div>
+  </div>`;
+  // const popup = document.createElement("div");
+  // popup.className = "cm-number-slider-popup";
 
-  slider.addEventListener("input", (e) => {
-    const newValue = parseFloat(e.target.value);
-    valueDisplay.value = newValue;
-    onChange(newValue);
-  });
+  // const container = document.createElement("div");
+  // container.className = "cm-slider-container";
 
-  valueDisplay.addEventListener("input", (e) => {
-    const newValue = parseFloat(e.target.value);
-    if (!isNaN(newValue)) {
-      slider.value = newValue;
-      onChange(newValue);
-    }
-  });
+  // const valueDisplay = document.createElement("input");
+  // valueDisplay.type = "number";
+  // valueDisplay.className = "cm-slider-value";
+  // valueDisplay.value = parseFloat(number.value);
+  // valueDisplay.step = "any";
 
-  popup.addEventListener("mousedown", (e) => {
-    e.stopPropagation();
-  });
+  // const slider = document.createElement("input");
+  // slider.type = "range";
+  // slider.className = "cm-slider";
 
-  const closeButton = document.createElement("button");
-  closeButton.className = "cm-slider-close";
-  closeButton.textContent = "×";
-  closeButton.addEventListener("click", onClose);
+  // const currentValue = parseFloat(number.value);
+  // let [min, max] = [0, currentValue * 2];
+  // if (currentValue === 0) [min, max] = [0, 100];
+  // if (min > max) [min, max] = [max, min];
 
-  const checkboxContainer = document.createElement("div");
-  checkboxContainer.className = "cm-slider-checkbox-container";
+  // slider.min = min;
+  // slider.max = max;
+  // slider.step = (max - min) / 20;
+  // slider.value = currentValue;
 
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.id = "show-details-checkbox";
-  checkbox.className = "cm-slider-checkbox";
-  checkbox.checked = isChecked;
+  // slider.addEventListener("input", (e) => {
+  //   const newValue = parseFloat(e.target.value);
+  //   valueDisplay.value = newValue;
+  //   onChange(newValue);
+  // });
 
-  const label = document.createElement("label");
-  label.htmlFor = "show-details-checkbox";
-  label.textContent = "Show in multiples";
-  label.className = "cm-slider-checkbox-label";
+  // valueDisplay.addEventListener("input", (e) => {
+  //   const newValue = parseFloat(e.target.value);
+  //   if (!isNaN(newValue)) {
+  //     slider.value = newValue;
+  //     onChange(newValue);
+  //   }
+  // });
 
-  checkbox.addEventListener("change", (e) => {
-    onCheckboxChange(e.target.checked);
-  });
+  // popup.addEventListener("mousedown", (e) => {
+  //   e.stopPropagation();
+  // });
 
-  checkboxContainer.appendChild(checkbox);
-  checkboxContainer.appendChild(label);
+  // const closeButton = document.createElement("button");
+  // closeButton.className = "cm-slider-close";
+  // closeButton.textContent = "×";
+  // closeButton.addEventListener("click", onClose);
 
-  container.appendChild(valueDisplay);
-  container.appendChild(slider);
-  container.appendChild(checkboxContainer);
-  popup.appendChild(container);
-  popup.appendChild(closeButton);
+  // const checkboxContainer = document.createElement("div");
+  // checkboxContainer.className = "cm-slider-checkbox-container";
 
-  return popup;
+  // const checkbox = document.createElement("input");
+  // checkbox.type = "checkbox";
+  // checkbox.id = "show-details-checkbox";
+  // checkbox.className = "cm-slider-checkbox";
+  // checkbox.checked = isChecked;
+
+  // const label = document.createElement("label");
+  // label.htmlFor = "show-details-checkbox";
+  // label.textContent = "Show in multiples";
+  // label.className = "cm-slider-checkbox-label";
+
+  // checkbox.addEventListener("change", (e) => {
+  //   onCheckboxChange(e.target.checked);
+  // });
+
+  // checkboxContainer.appendChild(checkbox);
+  // checkboxContainer.appendChild(label);
+
+  // container.appendChild(valueDisplay);
+  // container.appendChild(slider);
+  // container.appendChild(checkboxContainer);
+  // popup.appendChild(container);
+  // popup.appendChild(closeButton);
+
+  // return popup;
 }
 
 const numberSliderPlugin = ViewPlugin.fromClass(
@@ -254,9 +268,7 @@ const sliderStyles = EditorView.theme({
     position: "absolute",
     backgroundColor: "#ffffff",
     border: "1px solid #ccc",
-    borderRadius: "8px",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-    padding: "12px",
+    padding: "6px",
     zIndex: "1000",
     minWidth: "200px",
   },
