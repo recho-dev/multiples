@@ -12,7 +12,7 @@ p.setup = () => {
   p.background(0);
   p.stroke(255);
   p.translate(p.width / 2, p.height);
-  branch(70, 0);
+  branch(60, 0);
 };
 
 function branch(len, rotate) {

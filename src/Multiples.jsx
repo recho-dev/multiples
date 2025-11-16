@@ -63,7 +63,15 @@ function generateCode(code, params, {count = 4} = {}) {
 }
 
 export function Multiples({code, params, onSelect}) {
-  const multiples = useMemo(() => generateCode(code, params), [code, params]);
+  const cols = 4;
+
+  const multiples = useMemo(() => generateCode(code, params, {count: cols}), [code, params]);
+
+  const rows = useMemo(() => {
+    const n = Math.ceil(multiples.length / cols);
+    return Array.from({length: n}, (_, i) => multiples.slice(i * cols, (i + 1) * cols));
+  }, [multiples, cols]);
+
   return (
     <div>
       <div>
@@ -73,15 +81,19 @@ export function Multiples({code, params, onSelect}) {
           </span>
         ))}
       </div>
-      <div className="flex flex-wrap gap-6">
-        {multiples.map((multiple, index) => (
-          <div
-            key={index}
-            className="w-[200px] h-[200px] cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => onSelect(multiple)}
-          >
-            <Sketch code={multiple.code} />
-            <span className="text-xs">{`(${multiple.values.join(", ")})`}</span>
+      <div>
+        {rows.map((row, i) => (
+          <div key={i} className="flex gap-6 py-3">
+            {row.map((multiple, j) => (
+              <div
+                key={j}
+                className="w-[200px] h-[200px] cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => onSelect(multiple)}
+              >
+                <Sketch code={multiple.code} />
+                <span className="text-xs">{`(${multiple.values.join(", ")})`}</span>
+              </div>
+            ))}
           </div>
         ))}
       </div>
