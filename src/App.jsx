@@ -4,11 +4,28 @@ import {Editor} from "./Editor.jsx";
 import {Sketch} from "./Sketch.jsx";
 import {Multiples} from "./Multiples.jsx";
 
-const initialCode = `p.setup = () => {
+const initialCode = `let angle = Math.PI / 6;
+
+p.setup = () => {
   p.createCanvas(200, 200);
   p.background(0);
-  p.circle(100, 100, 50);
-};`;
+  p.stroke(255);
+  p.translate(p.width / 2, p.height);
+  branch(70, 0);
+};
+
+function branch(len, rotate) {
+  if (len < 10) return;
+  p.push();
+  p.rotate(rotate);
+  p.line(0, -len, 0, 0);
+  p.translate(0, -len);
+  len *= 0.66;
+  branch(len, -angle);
+  branch(len, angle);
+  p.pop();
+}
+`;
 
 function App() {
   const [code, setCode] = useState(initialCode);
@@ -33,12 +50,10 @@ function App() {
         </div>
         <div className="w-2/3 h-full overflow-auto">
           <div>
-            <h2 className="text-lg font-bold mb-2">Main Output</h2>
             <Sketch code={code} />
           </div>
           {params.length > 0 && (
             <div>
-              <h2 className="text-lg font-bold mb-2">Multiples</h2>
               <Multiples code={code} params={params} />
             </div>
           )}
