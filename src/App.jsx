@@ -2,7 +2,7 @@ import "./App.css";
 import {useState, useCallback, useRef, useEffect} from "react";
 import {Sketch} from "./Sketch.jsx";
 import {Multiples} from "./Multiples.jsx";
-import {createEditor} from "./createEditor.js";
+import {createEditor} from "./editor/index.js";
 
 const initialCode = `let angle = Math.PI / 6;
 

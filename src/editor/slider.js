@@ -1,40 +1,11 @@
-import {Decoration, EditorView, ViewPlugin} from "@codemirror/view";
-import {StateField, StateEffect, Annotation, Facet} from "@codemirror/state";
+import {EditorView, ViewPlugin} from "@codemirror/view";
+import {Annotation, Facet} from "@codemirror/state";
 
 // Define a annotation to label the slider change transaction.
 export const ANNO_SLIDER_UPDATE = Annotation.define();
 
-// Define a action to highlight the number.
-const highlightEffect = StateEffect.define();
-
-// Define a field to store the highlight decorations.
-const highlightField = StateField.define({
-  create() {
-    return Decoration.none;
-  },
-  update(decorations, tr) {
-    // Map the the decorations from the previous position to the new position.
-    decorations = decorations.map(tr.changes);
-
-    // If the transaction has a highlight effect, store the new decorations.
-    for (let effect of tr.effects) {
-      if (effect.is(highlightEffect)) {
-        decorations = effect.value;
-      }
-    }
-    return decorations;
-  },
-  // Render the decorations.
-  provide: (f) => EditorView.decorations.from(f),
-});
-
-// Define a decoration to highlight the number.
-const numberHighlight = Decoration.mark({class: "cm-number-hover"});
-
 // Define a facet to provide the params change callback.
 const paramsFacet = Facet.define({combine: (values) => values[0] || (() => {})});
-
-const numberRegex = /-?\d+\.?\d*/g;
 
 // Find a number on a specific line in the editor based on a given cursor or
 // mouse position.
@@ -43,6 +14,7 @@ function findNumberAt(view, pos) {
   const text = line.text;
   const offset = pos - line.from;
   let match;
+  const numberRegex = /-?\d+\.?\d*/g;
   while ((match = numberRegex.exec(text)) !== null) {
     const start = match.index;
     const end = start + match[0].length;
@@ -141,16 +113,13 @@ const numberSliderPlugin = ViewPlugin.fromClass(
   class {
     constructor(view) {
       this.view = view;
-      this.hoveredNumber = null;
       this.popup = null;
       this.activeNumber = null;
       this.mouseDownPos = null;
       this.params = [];
       this.onParamsChange = view.state.facet(paramsFacet);
-      this.mousemove = this.mousemove.bind(this);
       this.mousedown = this.mousedown.bind(this);
       this.mouseup = this.mouseup.bind(this);
-      view.dom.addEventListener("mousemove", this.mousemove);
       view.dom.addEventListener("mousedown", this.mousedown);
       view.dom.addEventListener("mouseup", this.mouseup);
     }
@@ -191,20 +160,6 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       this.onParamsChange({params: this.params, code: update.state.doc.toString()});
     }
 
-    mousemove(event) {
-      if (this.popup) return;
-      const pos = this.view.posAtCoords({x: event.clientX, y: event.clientY});
-      if (pos === null) return this.clearHighlight();
-      const number = findNumberAt(this.view, pos);
-      if (number) {
-        this.hoveredNumber = number;
-        const deco = Decoration.set([numberHighlight.range(number.from, number.to)]);
-        this.view.dispatch({effects: highlightEffect.of(deco)});
-      } else {
-        this.clearHighlight();
-      }
-    }
-
     mousedown(event) {
       this.mouseDownPos = {x: event.clientX, y: event.clientY};
     }
@@ -214,7 +169,7 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       const distance = Math.hypot(currentPos.x - this.mouseDownPos.x, currentPos.y - this.mouseDownPos.y);
       if (distance > 5) return;
       this.closePopup();
-      const pos = this.view.posAtCoords({x: event.clientX, y: event.clientY});
+      const pos = this.view.posAtCoords(currentPos);
       if (pos === null) return;
       const number = findNumberAt(this.view, pos);
       if (!number) return;
@@ -286,24 +241,15 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       this.activeNumber = null;
     }
 
-    clearHighlight() {
-      this.hoveredNumber = null;
-      this.view.dispatch({effects: highlightEffect.of(Decoration.none)});
-    }
-
     destroy() {
-      this.view.dom.removeEventListener("mousemove", this.mousemove);
       this.view.dom.removeEventListener("mousedown", this.mousedown);
-      document.removeEventListener("mousedown", this.documentClick);
+      this.view.dom.removeEventListener("mouseup", this.mouseup);
       this.closePopup();
     }
   }
 );
 
 const sliderStyles = EditorView.theme({
-  ".cm-number-hover": {
-    borderBottom: "1px solid #ccc",
-  },
   ".cm-number-slider-popup": {
     position: "absolute",
     backgroundColor: "#ffffff",
@@ -370,5 +316,5 @@ const sliderStyles = EditorView.theme({
 });
 
 export function numberSlider(onParamsChange) {
-  return [highlightField, numberSliderPlugin, sliderStyles, paramsFacet.of(onParamsChange || (() => {}))];
+  return [numberSliderPlugin, sliderStyles, paramsFacet.of(onParamsChange || (() => {}))];
 }

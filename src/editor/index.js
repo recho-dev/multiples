@@ -3,6 +3,7 @@ import {EditorView, basicSetup} from "codemirror";
 import {indentWithTab} from "@codemirror/commands";
 import {keymap} from "@codemirror/view";
 import {numberSlider, ANNO_SLIDER_UPDATE} from "./slider.js";
+import {numberHighlight} from "./number.js";
 
 function createEditor(
   parent,
@@ -14,6 +15,7 @@ function createEditor(
       basicSetup,
       javascript(),
       numberSlider(onParamsChange),
+      numberHighlight(),
       keymap.of([
         {
           key: "Mod-s",
