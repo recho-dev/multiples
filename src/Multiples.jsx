@@ -62,7 +62,7 @@ function generateCode(code, params, {count = 4} = {}) {
   return generateXd(code, params, {count});
 }
 
-export function Multiples({code, params}) {
+export function Multiples({code, params, onSelect}) {
   const multiples = useMemo(() => generateCode(code, params), [code, params]);
   return (
     <div>
@@ -75,7 +75,11 @@ export function Multiples({code, params}) {
       </div>
       <div className="flex flex-wrap gap-6">
         {multiples.map((multiple, index) => (
-          <div key={index} className="w-[200px] h-[200px]">
+          <div
+            key={index}
+            className="w-[200px] h-[200px] cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => onSelect(multiple)}
+          >
             <Sketch code={multiple.code} />
             <span className="text-xs">{`(${multiple.values.join(", ")})`}</span>
           </div>

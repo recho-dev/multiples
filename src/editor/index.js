@@ -4,6 +4,7 @@ import {indentWithTab} from "@codemirror/commands";
 import {keymap} from "@codemirror/view";
 import {numberSlider, ANNO_SLIDER_UPDATE} from "./slider.js";
 import {numberHighlight} from "./number.js";
+import * as d3 from "d3";
 
 function createEditor(
   parent,
@@ -40,9 +41,21 @@ function createEditor(
     onSave(view.state.doc.toString());
   }
 
+  function handleUpdate(params, values) {
+    const I = Array.from({length: params.length}, (_, i) => i);
+    const sortedI = d3.sort(I, (a, b) => params[b].from - params[a].from);
+    const changes = sortedI.map((i) => {
+      const {from, to} = params[i];
+      const newValue = values[i];
+      return {from, to, insert: newValue};
+    });
+    editor.dispatch({changes});
+  }
+
   return {
     editor,
     destroy: () => editor.destroy(),
+    update: handleUpdate,
   };
 }
 

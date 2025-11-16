@@ -33,6 +33,7 @@ function App() {
   const [params, setParams] = useState([]);
   const [showMultiples, setShowMultiples] = useState(false);
   const editorRef = useRef(null);
+  const editorInstanceRef = useRef(null);
 
   const onSave = useCallback((code) => {
     setCode(code);
@@ -48,16 +49,27 @@ function App() {
     if (type === "params-update") setShowMultiples(params.length > 0);
   }, []);
 
+  const onSelect = useCallback(
+    ({code, values}) => {
+      if (!editorInstanceRef.current || params.length === 0) return;
+      editorInstanceRef.current.update(params, values);
+      setCode(code);
+      setShowMultiples(false);
+    },
+    [params]
+  );
+
   useEffect(() => {
     if (!editorRef.current) return;
-    const {destroy} = createEditor(editorRef.current, {
+    editorInstanceRef.current = createEditor(editorRef.current, {
       initialCode: code,
       onSave,
       onSliderChange,
       onParamsChange,
     });
     return () => {
-      destroy();
+      editorInstanceRef.current.destroy();
+      editorInstanceRef.current = null;
     };
   }, []);
 
@@ -87,7 +99,9 @@ function App() {
               </span>
             )}
           </div>
-          <div>{showMultiples ? <Multiples code={code} params={params} /> : <Sketch code={code} />}</div>
+          <div>
+            {showMultiples ? <Multiples code={code} params={params} onSelect={onSelect} /> : <Sketch code={code} />}
+          </div>
         </div>
       </main>
     </div>
