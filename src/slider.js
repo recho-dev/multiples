@@ -1,16 +1,22 @@
 import {Decoration, EditorView, ViewPlugin} from "@codemirror/view";
 import {StateField, StateEffect, Annotation, Facet} from "@codemirror/state";
 
-const highlightEffect = StateEffect.define();
+// Define a annotation to label the slider change transaction.
 export const ANNO_SLIDER_UPDATE = Annotation.define();
-const paramsFacet = Facet.define({combine: (values) => values[0] || (() => {})});
 
+// Define a action to highlight the number.
+const highlightEffect = StateEffect.define();
+
+// Define a field to store the highlight decorations.
 const highlightField = StateField.define({
   create() {
     return Decoration.none;
   },
   update(decorations, tr) {
+    // Map the the decorations from the previous position to the new position.
     decorations = decorations.map(tr.changes);
+
+    // If the transaction has a highlight effect, store the new decorations.
     for (let effect of tr.effects) {
       if (effect.is(highlightEffect)) {
         decorations = effect.value;
@@ -18,25 +24,28 @@ const highlightField = StateField.define({
     }
     return decorations;
   },
+  // Render the decorations.
   provide: (f) => EditorView.decorations.from(f),
 });
 
-const numberHighlight = Decoration.mark({
-  class: "cm-number-hover",
-});
+// Define a decoration to highlight the number.
+const numberHighlight = Decoration.mark({class: "cm-number-hover"});
 
+// Define a facet to provide the params change callback.
+const paramsFacet = Facet.define({combine: (values) => values[0] || (() => {})});
+
+const numberRegex = /-?\d+\.?\d*/g;
+
+// Find a number on a specific line in the editor based on a given cursor or
+// mouse position.
 function findNumberAt(view, pos) {
   const line = view.state.doc.lineAt(pos);
   const text = line.text;
   const offset = pos - line.from;
-
-  const numberRegex = /-?\d+\.?\d*/g;
   let match;
-
   while ((match = numberRegex.exec(text)) !== null) {
     const start = match.index;
     const end = start + match[0].length;
-
     if (offset >= start && offset <= end) {
       return {
         from: line.from + start,
@@ -45,7 +54,6 @@ function findNumberAt(view, pos) {
       };
     }
   }
-
   return null;
 }
 
@@ -137,7 +145,7 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       this.popup = null;
       this.activeNumber = null;
       this.mouseDownPos = null;
-      this.paramByPos = new Map();
+      this.params = [];
       this.onParamsChange = view.state.facet(paramsFacet);
       this.mousemove = this.mousemove.bind(this);
       this.mousedown = this.mousedown.bind(this);
@@ -148,9 +156,39 @@ const numberSliderPlugin = ViewPlugin.fromClass(
     }
 
     update(update) {
-      if (this.popup && update.docChanged && !update.transactions.some((tr) => tr.annotation(ANNO_SLIDER_UPDATE))) {
-        this.closePopup();
+      if (update.docChanged) {
+        this.updateParamPositions(update);
+        const hasSliderUpdate = update.transactions.some((tr) => tr.annotation(ANNO_SLIDER_UPDATE));
+        if (this.popup && !hasSliderUpdate) this.closePopup();
       }
+    }
+
+    updateParamPositions(update) {
+      const newParams = [];
+
+      for (const param of this.params) {
+        // Map the old positions through the changes.
+        let newFrom = param.from;
+        let newTo = param.to;
+        for (const tr of update.transactions) {
+          newFrom = tr.changes.mapPos(newFrom, -1); // -1 to stick before insertions.
+          newTo = tr.changes.mapPos(newTo, 1); // 1 to stick after insertions.
+        }
+
+        // Check if the position is still valid. If not, skip this param.
+        if (newFrom < 0 || newTo > update.state.doc.length || newFrom >= newTo) continue;
+
+        // Get the text at the new position.
+        const text = update.state.doc.sliceString(newFrom, newTo);
+
+        // Check if it's still a valid number.
+        if (numberRegex.test(text)) newParams.push({from: newFrom, to: newTo, value: text});
+
+        // Otherwise, the param was deleted or modified, so  skip it
+      }
+
+      this.params = newParams;
+      this.onParamsChange({params: this.params, code: update.state.doc.toString()});
     }
 
     mousemove(event) {
@@ -209,15 +247,18 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       const onClose = () => this.closePopup();
 
       const onCheckboxChange = (checked) => {
-        const key = `${number.from}:${number.to}`;
-        const param = {from: number.from, to: number.to, value: number.value};
-        if (checked) this.paramByPos.set(key, param);
-        else this.paramByPos.delete(key);
-        this.onParamsChange(Array.from(this.paramByPos.values()));
+        if (checked) {
+          const param = {from: number.from, to: number.to, value: number.value};
+          this.params.push(param);
+        } else {
+          this.params = this.params.filter((p) => !(p.from === number.from && p.to === number.to));
+        }
+        this.params = [...this.params];
+        this.onParamsChange({params: this.params, code: this.view.state.doc.toString()});
       };
 
-      const key = `${number.from}:${number.to}`;
-      const isChecked = this.paramByPos.has(key);
+      const isChecked = this.params.some((p) => p.from === number.from && p.to === number.to);
+
       this.popup = createSliderPopup(number, onChange, onClose, onCheckboxChange, isChecked);
 
       const {left, top, right, bottom} = this.view.coordsAtPos(number.from);

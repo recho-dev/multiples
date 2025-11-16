@@ -1,8 +1,8 @@
 import "./App.css";
-import {useState, useCallback} from "react";
-import {Editor} from "./Editor.jsx";
+import {useState, useCallback, useRef, useEffect} from "react";
 import {Sketch} from "./Sketch.jsx";
 import {Multiples} from "./Multiples.jsx";
+import {createEditor} from "./createEditor.js";
 
 const initialCode = `let angle = Math.PI / 6;
 
@@ -30,6 +30,7 @@ function branch(len, rotate) {
 function App() {
   const [code, setCode] = useState(initialCode);
   const [params, setParams] = useState([]);
+  const editorRef = useRef(null);
 
   const onSave = useCallback((code) => {
     setCode(code);
@@ -39,6 +40,24 @@ function App() {
     setCode(code);
   }, []);
 
+  const onParamsChange = useCallback(({params, code}) => {
+    setParams(params);
+    setCode(code);
+  }, []);
+
+  useEffect(() => {
+    if (!editorRef.current) return;
+    const {destroy} = createEditor(editorRef.current, {
+      initialCode: code,
+      onSave,
+      onSliderChange,
+      onParamsChange,
+    });
+    return () => {
+      destroy();
+    };
+  }, []);
+
   return (
     <div className="min-h-screen">
       <header className="h-[64px]">
@@ -46,7 +65,7 @@ function App() {
       </header>
       <main className="flex h-[calc(100vh-64px)]">
         <div className="w-1/3 h-full">
-          <Editor code={code} onSave={onSave} onSliderChange={onSliderChange} onParamsChange={setParams} />
+          <div ref={editorRef} />
         </div>
         <div className="w-2/3 h-full overflow-auto">
           <div>
