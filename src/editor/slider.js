@@ -39,88 +39,15 @@ function createSliderPopup(number, onChange, onClose, onCheckboxChange, isChecke
 
   const ruler = createRuler({min, max, value: currentValue, width: 200, height: 50, onChange});
   const handleMouseDown = (event) => event.stopPropagation();
-  // const handleCheckboxChange = (e) => onCheckboxChange(e.target.checked);
-  // <div><label>Show</label><input type="checkbox" checked=${isChecked} onchange=${handleCheckboxChange} /></div>
+  const handleCheckboxChange = (e) => onCheckboxChange(e.target.checked);
+
   return html`<div class="cm-number-slider-popup" onmousedown=${handleMouseDown}>
     <div>${ruler}</div>
+    <div class="cm-slider-checkbox-container">
+      <input type="checkbox" checked=${isChecked} onchange=${handleCheckboxChange} />
+      <label class="cm-slider-checkbox-label">Sweep</label>
+    </div>
   </div>`;
-  // const popup = document.createElement("div");
-  // popup.className = "cm-number-slider-popup";
-
-  // const container = document.createElement("div");
-  // container.className = "cm-slider-container";
-
-  // const valueDisplay = document.createElement("input");
-  // valueDisplay.type = "number";
-  // valueDisplay.className = "cm-slider-value";
-  // valueDisplay.value = parseFloat(number.value);
-  // valueDisplay.step = "any";
-
-  // const slider = document.createElement("input");
-  // slider.type = "range";
-  // slider.className = "cm-slider";
-
-  // const currentValue = parseFloat(number.value);
-  // let [min, max] = [0, currentValue * 2];
-  // if (currentValue === 0) [min, max] = [0, 100];
-  // if (min > max) [min, max] = [max, min];
-
-  // slider.min = min;
-  // slider.max = max;
-  // slider.step = (max - min) / 20;
-  // slider.value = currentValue;
-
-  // slider.addEventListener("input", (e) => {
-  //   const newValue = parseFloat(e.target.value);
-  //   valueDisplay.value = newValue;
-  //   onChange(newValue);
-  // });
-
-  // valueDisplay.addEventListener("input", (e) => {
-  //   const newValue = parseFloat(e.target.value);
-  //   if (!isNaN(newValue)) {
-  //     slider.value = newValue;
-  //     onChange(newValue);
-  //   }
-  // });
-
-  // popup.addEventListener("mousedown", (e) => {
-  //   e.stopPropagation();
-  // });
-
-  // const closeButton = document.createElement("button");
-  // closeButton.className = "cm-slider-close";
-  // closeButton.textContent = "×";
-  // closeButton.addEventListener("click", onClose);
-
-  // const checkboxContainer = document.createElement("div");
-  // checkboxContainer.className = "cm-slider-checkbox-container";
-
-  // const checkbox = document.createElement("input");
-  // checkbox.type = "checkbox";
-  // checkbox.id = "show-details-checkbox";
-  // checkbox.className = "cm-slider-checkbox";
-  // checkbox.checked = isChecked;
-
-  // const label = document.createElement("label");
-  // label.htmlFor = "show-details-checkbox";
-  // label.textContent = "Show in multiples";
-  // label.className = "cm-slider-checkbox-label";
-
-  // checkbox.addEventListener("change", (e) => {
-  //   onCheckboxChange(e.target.checked);
-  // });
-
-  // checkboxContainer.appendChild(checkbox);
-  // checkboxContainer.appendChild(label);
-
-  // container.appendChild(valueDisplay);
-  // container.appendChild(slider);
-  // container.appendChild(checkboxContainer);
-  // popup.appendChild(container);
-  // popup.appendChild(closeButton);
-
-  // return popup;
 }
 
 const numberSliderPlugin = ViewPlugin.fromClass(
@@ -163,6 +90,8 @@ const numberSliderPlugin = ViewPlugin.fromClass(
 
         // Get the text at the new position.
         const text = update.state.doc.sliceString(newFrom, newTo);
+
+        const numberRegex = /-?\d+\.?\d*/g;
 
         // Check if it's still a valid number.
         if (numberRegex.test(text)) newParams.push({from: newFrom, to: newTo, value: text});
@@ -272,58 +201,13 @@ const sliderStyles = EditorView.theme({
     zIndex: "1000",
     minWidth: "200px",
   },
-  ".cm-slider-container": {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  ".cm-slider-value": {
-    width: "100%",
-    padding: "6px 8px",
-    fontSize: "14px",
-    border: "1px solid #ddd",
-    borderRadius: "4px",
-    boxSizing: "border-box",
-  },
-  ".cm-slider": {
-    width: "100%",
-    cursor: "grab",
-    "&:active": {
-      cursor: "grabbing",
-    },
-  },
-  ".cm-slider-close": {
-    position: "absolute",
-    top: "4px",
-    right: "4px",
-    background: "none",
-    border: "none",
-    fontSize: "20px",
-    cursor: "pointer",
-    color: "#999",
-    lineHeight: "1",
-    padding: "0",
-    width: "20px",
-    height: "20px",
-    "&:hover": {
-      color: "#333",
-    },
-  },
   ".cm-slider-checkbox-container": {
+    paddingLeft: "6px",
     display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    marginTop: "4px",
-  },
-  ".cm-slider-checkbox": {
-    cursor: "pointer",
-    width: "16px",
-    height: "16px",
+    gap: "6px",
   },
   ".cm-slider-checkbox-label": {
-    cursor: "pointer",
-    fontSize: "14px",
-    userSelect: "none",
+    fontSize: "12px",
   },
 });
 

@@ -1,6 +1,8 @@
 import {useEffect, useRef, useState} from "react";
 import p5 from "p5";
 
+p5.disableFriendlyErrors = true;
+
 function evalP5Code(parent, code) {
   const sketch = new p5(eval(`(p) => { ${code}}`), parent);
   return sketch;
