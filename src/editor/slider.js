@@ -7,8 +7,6 @@ export const ANNO_SLIDER_UPDATE = Annotation.define();
 // Define a facet to provide the params change callback.
 const paramsFacet = Facet.define({combine: (values) => values[0] || (() => {})});
 
-const numberRegex = /-?\d+\.?\d*/g;
-
 // Find a number on a specific line in the editor based on a given cursor or
 // mouse position.
 function findNumberAt(view, pos) {
@@ -16,6 +14,7 @@ function findNumberAt(view, pos) {
   const text = line.text;
   const offset = pos - line.from;
   let match;
+  const numberRegex = /-?\d+\.?\d*/g;
   while ((match = numberRegex.exec(text)) !== null) {
     const start = match.index;
     const end = start + match[0].length;
@@ -170,7 +169,7 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       const distance = Math.hypot(currentPos.x - this.mouseDownPos.x, currentPos.y - this.mouseDownPos.y);
       if (distance > 5) return;
       this.closePopup();
-      const pos = this.view.posAtCoords({x: event.clientX, y: event.clientY});
+      const pos = this.view.posAtCoords(currentPos);
       if (pos === null) return;
       const number = findNumberAt(this.view, pos);
       if (!number) return;
