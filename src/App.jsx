@@ -86,7 +86,7 @@ function App() {
         <h1> Recho Multiples </h1>
         <button
           onClick={handleRun}
-          className="w-10 h-10 bg-black hover:bg-gray-800 text-white rounded-full flex items-center justify-center transition-colors shadow-md p-2"
+          className="w-10 h-10 bg-black hover:bg-gray-800 text-white rounded-full flex items-center justify-center transition-colors shadow-md p-2 cursor-pointer"
           title="Run"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
