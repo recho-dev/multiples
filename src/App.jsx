@@ -5,6 +5,7 @@ import {Sketch} from "./Sketch.jsx";
 import {Multiples} from "./Multiples.jsx";
 import {createEditor} from "./editor/index.js";
 import {clsx} from "./clsx.js";
+import confetti from "canvas-confetti";
 
 const initialCode = `let angleRight = Math.PI / 6;
 let angleLeft = -Math.PI / 6;
@@ -175,6 +176,13 @@ function App() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedVersions));
       setShowSaveModal(false);
       setSaveName("");
+      
+      // Trigger confetti animation
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: {y: 0.6},
+      });
     }
   }, [savedVersions, currentVersionId, saveName]);
 
