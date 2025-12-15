@@ -14,6 +14,9 @@ importers:
       '@codemirror/lang-javascript':
         specifier: ^6.2.4
         version: 6.2.4
+      '@codemirror/lint':
+        specifier: ^6.9.2
+        version: 6.9.2
       '@codemirror/state':
         specifier: ^6.5.2
         version: 6.5.2
@@ -26,6 +29,9 @@ importers:
       d3:
         specifier: ^7.9.0
         version: 7.9.0
+      eslint-linter-browserify:
+        specifier: ^9.39.2
+        version: 9.39.2
       htl:
         specifier: ^0.3.1
         version: 0.3.1
@@ -882,6 +888,9 @@ packages:
     resolution: {integrity: sha512-2NlIDTwUWJN0mRPQOdtQBzbUHvdGY2P1VXSyU83Q3xKxM7WHX2Ql8dKq782Q9TgQUNOLEzEYu9bzLNj1q88I5w==}
     engines: {node: '>=6.0'}
     hasBin: true
+
+  eslint-linter-browserify@9.39.2:
+    resolution: {integrity: sha512-X4oD9ymZLMaNcSRZkNyDEcwObLPTg9QsQM/YHnfWJbnqUJpmmgicXtgi9UGgk+ntC9Aydnp3RW7+uWrkoUbWbg==}
 
   eslint-plugin-react-hooks@5.2.0:
     resolution: {integrity: sha512-+f15FfK64YQwZdJNELETdn5ibXEUQmW1DZL6KXhNnc2heoy/sg9VJJeT7n8TlMWouzWqSWavFkIhHyIbIAEapg==}
@@ -2105,6 +2114,8 @@ snapshots:
       esutils: 2.0.3
     optionalDependencies:
       source-map: 0.6.1
+
+  eslint-linter-browserify@9.39.2: {}
 
   eslint-plugin-react-hooks@5.2.0(eslint@9.39.1(jiti@2.6.1)):
     dependencies:

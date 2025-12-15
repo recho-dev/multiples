@@ -1,10 +1,25 @@
-import {javascript} from "@codemirror/lang-javascript";
+import {javascript, esLint} from "@codemirror/lang-javascript";
 import {EditorView, basicSetup} from "codemirror";
 import {indentWithTab} from "@codemirror/commands";
 import {keymap} from "@codemirror/view";
 import {numberSlider, ANNO_SLIDER_UPDATE} from "./slider.js";
 import {numberHighlight} from "./number.js";
 import * as d3 from "d3";
+import {linter} from "@codemirror/lint";
+import * as eslint from "eslint-linter-browserify";
+import {browser} from "globals";
+
+const eslintConfig = {
+  languageOptions: {
+    globals: {
+      ...browser,
+    },
+    parserOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+    },
+  },
+};
 
 function createEditor(
   parent,
@@ -26,6 +41,7 @@ function createEditor(
         indentWithTab,
       ]),
       EditorView.updateListener.of(handleSliderChange),
+      linter(esLint(new eslint.Linter(), eslintConfig)),
     ],
     doc: initialCode,
   });
