@@ -200,7 +200,7 @@ function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="h-[60px] flex items-center gap-3 px-4 py-4">
+      <header className="h-[60px] flex items-center gap-3 px-4 py-4 border-b border-gray-200">
         <h1> Recho Multiples </h1>
         <button
           onClick={handleRun}
@@ -233,7 +233,7 @@ function App() {
           direction="horizontal"
           snapOffset={0}
         >
-          <div ref={sidebarRef} className="overflow-y-auto p-4">
+          <div ref={sidebarRef} className="overflow-y-auto px-4 py-2">
             <h2 className="text-sm font-semibold mb-3 text-gray-700">History</h2>
             {savedVersions.length === 0 ? (
               <p className="text-xs text-gray-500">No saved versions yet</p>
@@ -277,11 +277,11 @@ function App() {
               </div>
             )}
           </div>
-          <div className="h-full mt-6">
+          <div className="h-full">
             <div ref={editorRef} className="h-full" />
           </div>
-          <div className="h-full overflow-auto">
-            <div className="flex gap-2 mb-1">
+          <div className="h-full overflow-auto ml-4 mt-2">
+            <div className="flex gap-2 mb-2">
               <span
                 className={clsx("cursor-pointer", !showMultiples && "border-b-1")}
                 onClick={() => setShowMultiples(false)}
