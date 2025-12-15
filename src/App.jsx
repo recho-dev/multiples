@@ -1,5 +1,6 @@
 import "./App.css";
 import {useState, useCallback, useRef, useEffect} from "react";
+import Split from "react-split";
 import {Sketch} from "./Sketch.jsx";
 import {Multiples} from "./Multiples.jsx";
 import {createEditor} from "./editor/index.js";
@@ -29,6 +30,7 @@ function branch(len, rotate) {
 `;
 
 const STORAGE_KEY = "recho-multiples-saved-versions";
+const SPLIT_SIZES_KEY = "recho-multiples-split-sizes";
 
 function uid() {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -41,11 +43,12 @@ function App() {
   const [savedVersions, setSavedVersions] = useState([]);
   const [currentVersionId, setCurrentVersionId] = useState(null);
   const [sidebarWidth, setSidebarWidth] = useState(176);
+  const [splitSizes, setSplitSizes] = useState([15, 35, 50]); // [history, editor, preview]
   const sidebarRef = useRef(null);
   const editorRef = useRef(null);
   const editorInstanceRef = useRef(null);
 
-  // Load saved versions from localStorage on mount
+  // Load saved versions and split sizes from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -58,6 +61,19 @@ function App() {
         }
       } catch (e) {
         console.error("Failed to load saved versions:", e);
+      }
+    }
+
+    // Load split sizes
+    const savedSizes = localStorage.getItem(SPLIT_SIZES_KEY);
+    if (savedSizes) {
+      try {
+        const sizes = JSON.parse(savedSizes);
+        if (Array.isArray(sizes) && sizes.length === 3) {
+          setSplitSizes(sizes);
+        }
+      } catch (e) {
+        console.error("Failed to load split sizes:", e);
       }
     }
   }, []);
@@ -177,6 +193,11 @@ function App() {
     [savedVersions, currentVersionId]
   );
 
+  const handleSplitChange = useCallback((sizes) => {
+    setSplitSizes(sizes);
+    localStorage.setItem(SPLIT_SIZES_KEY, JSON.stringify(sizes));
+  }, []);
+
   return (
     <div className="min-h-screen">
       <header className="h-[60px] flex items-center gap-3 px-4 py-4">
@@ -202,68 +223,85 @@ function App() {
           </svg>
         </button>
       </header>
-      <main className="flex h-[calc(100vh-60px)]">
-        <div ref={sidebarRef} className="w-48 border-r border-gray-200 overflow-y-auto p-4">
-          <h2 className="text-sm font-semibold mb-3 text-gray-700">History</h2>
-          {savedVersions.length === 0 ? (
-            <p className="text-xs text-gray-500">No saved versions yet</p>
-          ) : (
-            <div className="space-y-3">
-              {savedVersions.map((version, index) => {
-                const isCurrent = currentVersionId === version.id;
-                return (
-                  <div
-                    key={version.id}
-                    className={clsx(
-                      "rounded cursor-pointer transition-colors border overflow-hidden group relative",
-                      isCurrent
-                        ? "bg-blue-50 border-blue-300"
-                        : "border-transparent hover:border-gray-300 hover:bg-gray-50"
-                    )}
-                    title={version.code.substring(0, 50) + "..."}
-                  >
-                    <div onClick={() => handleLoadVersion(version)} className="w-full relative">
-                      <Sketch code={version.code} width={sidebarWidth} />
-                    </div>
-                    <button
-                      onClick={(e) => handleDeleteVersion(version.id, e)}
-                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1.5 bg-white hover:bg-red-100 rounded shadow-sm transition-opacity"
-                      title="Delete version"
+      <main className="h-[calc(100vh-60px)]">
+        <Split
+          className="split"
+          sizes={splitSizes}
+          minSize={[150, 300, 400]}
+          gutterSize={8}
+          onDragEnd={handleSplitChange}
+          direction="horizontal"
+          snapOffset={0}
+        >
+          <div ref={sidebarRef} className="overflow-y-auto p-4">
+            <h2 className="text-sm font-semibold mb-3 text-gray-700">History</h2>
+            {savedVersions.length === 0 ? (
+              <p className="text-xs text-gray-500">No saved versions yet</p>
+            ) : (
+              <div className="space-y-3">
+                {savedVersions.map((version, index) => {
+                  const isCurrent = currentVersionId === version.id;
+                  return (
+                    <div
+                      key={version.id}
+                      className={clsx(
+                        "rounded cursor-pointer transition-colors border overflow-hidden group relative",
+                        isCurrent
+                          ? "bg-blue-50 border-blue-300"
+                          : "border-transparent hover:border-gray-300 hover:bg-gray-50"
+                      )}
+                      title={version.code.substring(0, 50) + "..."}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      </svg>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        <div className="w-1/3 h-full mt-6">
-          <div ref={editorRef} />
-        </div>
-        <div className="w-2/3 h-full overflow-auto">
-          <div className="flex gap-2 mb-1">
-            <span
-              className={clsx("cursor-pointer", !showMultiples && "border-b-1")}
-              onClick={() => setShowMultiples(false)}
-            >
-              Preview
-            </span>
-            {params.length >= 0 && (
-              <span
-                className={clsx("cursor-pointer", showMultiples && "border-b-1")}
-                onClick={() => setShowMultiples(true)}
-              >
-                Multiples
-              </span>
+                      <div onClick={() => handleLoadVersion(version)} className="w-full relative">
+                        <Sketch code={version.code} width={sidebarWidth} />
+                      </div>
+                      <button
+                        onClick={(e) => handleDeleteVersion(version.id, e)}
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1.5 bg-white hover:bg-red-100 rounded shadow-sm transition-opacity"
+                        title="Delete version"
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
-          <div>
-            {showMultiples ? <Multiples code={code} params={params} onSelect={onSelect} /> : <Sketch code={code} />}
+          <div className="h-full mt-6">
+            <div ref={editorRef} className="h-full" />
           </div>
-        </div>
+          <div className="h-full overflow-auto">
+            <div className="flex gap-2 mb-1">
+              <span
+                className={clsx("cursor-pointer", !showMultiples && "border-b-1")}
+                onClick={() => setShowMultiples(false)}
+              >
+                Preview
+              </span>
+              {params.length >= 0 && (
+                <span
+                  className={clsx("cursor-pointer", showMultiples && "border-b-1")}
+                  onClick={() => setShowMultiples(true)}
+                >
+                  Multiples
+                </span>
+              )}
+            </div>
+            <div>
+              {showMultiples ? <Multiples code={code} params={params} onSelect={onSelect} /> : <Sketch code={code} />}
+            </div>
+          </div>
+        </Split>
       </main>
     </div>
   );
