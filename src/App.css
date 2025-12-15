@@ -39,3 +39,7 @@
   cursor: col-resize;
   background-image: none;
 }
+
+.cm-editor {
+  outline: none !important;
+}
