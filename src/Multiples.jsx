@@ -72,6 +72,14 @@ export function Multiples({code, params, onSelect}) {
     return Array.from({length: n}, (_, i) => multiples.slice(i * cols, (i + 1) * cols));
   }, [multiples, cols]);
 
+  if (params.length === 0) {
+    return (
+      <div className="flex items-center h-full text-gray-500">
+        <p>No parameter is swept</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div>
