@@ -150,7 +150,7 @@ function App() {
       </header>
       <main className="flex h-[calc(100vh-60px)]">
         <div className="w-48 border-r border-gray-200 overflow-y-auto p-4">
-          <h2 className="text-sm font-semibold mb-3 text-gray-700">Saved Versions</h2>
+          <h2 className="text-sm font-semibold mb-3 text-gray-700">History</h2>
           {savedVersions.length === 0 ? (
             <p className="text-xs text-gray-500">No saved versions yet</p>
           ) : (
