@@ -52,11 +52,18 @@ function createEditor(
     editor.dispatch({changes});
   }
 
+  function setCode(newCode) {
+    editor.dispatch({
+      changes: {from: 0, to: editor.state.doc.length, insert: newCode},
+    });
+  }
+
   return {
     editor,
     destroy: () => editor.destroy(),
     update: handleUpdate,
     getCode: () => editor.state.doc.toString(),
+    setCode,
   };
 }
 
