@@ -30,12 +30,16 @@ function branch(len, rotate) {
 
 const STORAGE_KEY = "recho-multiples-saved-versions";
 
+function uid() {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
 function App() {
   const [code, setCode] = useState(initialCode);
   const [params, setParams] = useState([]);
   const [showMultiples, setShowMultiples] = useState(false);
   const [savedVersions, setSavedVersions] = useState([]);
-  const [currentVersionTimestamp, setCurrentVersionTimestamp] = useState(null);
+  const [currentVersionId, setCurrentVersionId] = useState(null);
   const editorRef = useRef(null);
   const editorInstanceRef = useRef(null);
 
@@ -48,7 +52,7 @@ function App() {
         setSavedVersions(versions);
         // Set the latest version as current by default
         if (versions.length > 0) {
-          setCurrentVersionTimestamp(versions[0].timestamp);
+          setCurrentVersionId(versions[0].id);
         }
       } catch (e) {
         console.error("Failed to load saved versions:", e);
@@ -104,22 +108,24 @@ function App() {
     if (editorInstanceRef.current) {
       const currentCode = editorInstanceRef.current.getCode();
       const newVersion = {
+        id: uid(),
+        parentId: currentVersionId, // Track which version this was derived from
         code: currentCode,
         timestamp: new Date().toISOString(),
         time: new Date().toLocaleString(),
       };
       const updatedVersions = [newVersion, ...savedVersions];
       setSavedVersions(updatedVersions);
-      setCurrentVersionTimestamp(newVersion.timestamp);
+      setCurrentVersionId(newVersion.id);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedVersions));
     }
-  }, [savedVersions]);
+  }, [savedVersions, currentVersionId]);
 
   const handleLoadVersion = useCallback((version) => {
     if (editorInstanceRef.current) {
       editorInstanceRef.current.setCode(version.code);
       setCode(version.code);
-      setCurrentVersionTimestamp(version.timestamp);
+      setCurrentVersionId(version.id);
     }
   }, []);
 
@@ -156,10 +162,10 @@ function App() {
           ) : (
             <div className="space-y-2">
               {savedVersions.map((version, index) => {
-                const isCurrent = currentVersionTimestamp === version.timestamp;
+                const isCurrent = currentVersionId === version.id;
                 return (
                   <div
-                    key={version.timestamp}
+                    key={version.id}
                     onClick={() => handleLoadVersion(version)}
                     className={clsx(
                       "text-xs p-2 rounded cursor-pointer transition-colors border",
