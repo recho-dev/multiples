@@ -200,10 +200,16 @@ function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="h-[60px] flex items-center gap-3 px-4 py-4 border-b border-gray-200">
-        <h1 className="font-mono font-bold"> Recho Multiples </h1>
+      <header className="h-[80px] flex flex-col justify-center gap-1 px-4 py-4 border-b border-gray-200 bg-black">
+        <h1 className="font-mono text-lg text-white">
+          Let's draw a tree together with <strong>Recho Multiples</strong>!
+        </h1>
+        <h1 className="font-mono text-base text-white">
+          You can <strong>code</strong>, <strong>drag sliders</strong>, <strong>sweep parameters</strong> and{" "}
+          <strong>browse the history</strong> to see the evolution of the tree!
+        </h1>
       </header>
-      <main className="h-[calc(100vh-60px)]">
+      <main className="h-[calc(100vh-80px)]">
         <Split
           className="split"
           sizes={splitSizes}
