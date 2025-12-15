@@ -90,7 +90,7 @@ export function Multiples({code, params, onSelect}) {
                 className="w-[200px] h-[200px] cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => onSelect(multiple)}
               >
-                <Sketch code={multiple.code} />
+                <Sketch code={multiple.code} width={200} height={200} />
                 <span className="text-xs">{`(${multiple.values.join(", ")})`}</span>
               </div>
             ))}
