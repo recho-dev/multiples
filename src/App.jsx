@@ -35,6 +35,7 @@ function App() {
   const [params, setParams] = useState([]);
   const [showMultiples, setShowMultiples] = useState(false);
   const [savedVersions, setSavedVersions] = useState([]);
+  const [currentVersionTimestamp, setCurrentVersionTimestamp] = useState(null);
   const editorRef = useRef(null);
   const editorInstanceRef = useRef(null);
 
@@ -45,6 +46,10 @@ function App() {
       try {
         const versions = JSON.parse(saved);
         setSavedVersions(versions);
+        // Set the latest version as current by default
+        if (versions.length > 0) {
+          setCurrentVersionTimestamp(versions[0].timestamp);
+        }
       } catch (e) {
         console.error("Failed to load saved versions:", e);
       }
@@ -105,6 +110,7 @@ function App() {
       };
       const updatedVersions = [newVersion, ...savedVersions];
       setSavedVersions(updatedVersions);
+      setCurrentVersionTimestamp(newVersion.timestamp);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedVersions));
     }
   }, [savedVersions]);
@@ -113,6 +119,7 @@ function App() {
     if (editorInstanceRef.current) {
       editorInstanceRef.current.setCode(version.code);
       setCode(version.code);
+      setCurrentVersionTimestamp(version.timestamp);
     }
   }, []);
 
@@ -148,16 +155,26 @@ function App() {
             <p className="text-xs text-gray-500">No saved versions yet</p>
           ) : (
             <div className="space-y-2">
-              {savedVersions.map((version, index) => (
-                <div
-                  key={version.timestamp}
-                  onClick={() => handleLoadVersion(version)}
-                  className="text-xs p-2 rounded cursor-pointer hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-300"
-                  title={version.code.substring(0, 50) + "..."}
-                >
-                  <div className="text-gray-700 font-medium">{version.time}</div>
-                </div>
-              ))}
+              {savedVersions.map((version, index) => {
+                const isCurrent = currentVersionTimestamp === version.timestamp;
+                return (
+                  <div
+                    key={version.timestamp}
+                    onClick={() => handleLoadVersion(version)}
+                    className={clsx(
+                      "text-xs p-2 rounded cursor-pointer transition-colors border",
+                      isCurrent
+                        ? "bg-blue-50 border-blue-300 text-blue-900"
+                        : "border-transparent hover:border-gray-300 hover:bg-gray-100"
+                    )}
+                    title={version.code.substring(0, 50) + "..."}
+                  >
+                    <div className={clsx("font-medium", isCurrent ? "text-blue-900" : "text-gray-700")}>
+                      {version.time}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
