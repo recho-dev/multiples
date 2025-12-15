@@ -56,6 +56,7 @@ function createEditor(
     editor,
     destroy: () => editor.destroy(),
     update: handleUpdate,
+    getCode: () => editor.state.doc.toString(),
   };
 }
 

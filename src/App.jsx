@@ -73,12 +73,28 @@ function App() {
     };
   }, []);
 
+  const handleRun = useCallback(() => {
+    if (editorInstanceRef.current) {
+      const currentCode = editorInstanceRef.current.getCode();
+      setCode(currentCode);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen">
-      <header className="h-[40px]">
+      <header className="h-[60px] flex items-center gap-3 px-4 py-4">
         <h1> Recho Multiples </h1>
+        <button
+          onClick={handleRun}
+          className="w-10 h-10 bg-black hover:bg-gray-800 text-white rounded-full flex items-center justify-center transition-colors shadow-md p-2"
+          title="Run"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </button>
       </header>
-      <main className="flex h-[calc(100vh-40px)]">
+      <main className="flex h-[calc(100vh-60px)]">
         <div className="w-1/3 h-full mt-6">
           <div ref={editorRef} />
         </div>
