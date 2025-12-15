@@ -14,13 +14,34 @@ function scaleCanvas(canvas, containerWidth, containerHeight) {
   const canvasHeight = canvas.height / (window.devicePixelRatio || 1);
   if (!canvasWidth || !canvasHeight) return;
 
-  const scaleX = containerWidth / canvasWidth;
-  const scaleY = containerHeight / canvasHeight;
-  const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+  let scale;
+  let calculatedHeight;
+
+  if (containerHeight === undefined) {
+    // Width-only: preserve aspect ratio
+    scale = Math.min(containerWidth / canvasWidth, 1); // Don't scale up, only down
+    calculatedHeight = canvasHeight * scale;
+  } else {
+    // Both width and height: fit within container
+    const scaleX = containerWidth / canvasWidth;
+    const scaleY = containerHeight / canvasHeight;
+    scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+    calculatedHeight = containerHeight;
+  }
 
   canvas.style.transform = `scale(${scale})`;
   canvas.style.transformOrigin = "center center";
   canvas.style.display = "block";
+
+  // Update container height if width-only
+  if (containerHeight === undefined) {
+    const parent = canvas.parentElement;
+    if (parent) {
+      parent.style.height = `${calculatedHeight}px`;
+    }
+  }
+
+  return calculatedHeight;
 }
 
 export function Sketch({code, width, height}) {
@@ -35,14 +56,16 @@ export function Sketch({code, width, height}) {
 
     try {
       const parent = document.createElement("div");
-      if (width !== undefined && height !== undefined) {
+      if (width !== undefined) {
         parent.style.width = `${width}px`;
-        parent.style.height = `${height}px`;
         parent.style.overflow = "hidden";
         parent.style.display = "flex";
         parent.style.alignItems = "center";
         parent.style.justifyContent = "center";
         parent.style.position = "relative";
+        if (height !== undefined) {
+          parent.style.height = `${height}px`;
+        }
       }
       sketchRef.current.appendChild(parent);
 
@@ -52,7 +75,7 @@ export function Sketch({code, width, height}) {
       const mutationObserver = new MutationObserver(() => {
         const canvas = parent.querySelector("canvas");
         if (canvas) {
-          if (width !== undefined && height !== undefined) {
+          if (width !== undefined) {
             // Scale the canvas to fit within the container
             requestAnimationFrame(() => {
               scaleCanvas(canvas, width, height);

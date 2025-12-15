@@ -40,6 +40,8 @@ function App() {
   const [showMultiples, setShowMultiples] = useState(false);
   const [savedVersions, setSavedVersions] = useState([]);
   const [currentVersionId, setCurrentVersionId] = useState(null);
+  const [sidebarWidth, setSidebarWidth] = useState(176);
+  const sidebarRef = useRef(null);
   const editorRef = useRef(null);
   const editorInstanceRef = useRef(null);
 
@@ -58,6 +60,27 @@ function App() {
         console.error("Failed to load saved versions:", e);
       }
     }
+  }, []);
+
+  // Measure sidebar width
+  useEffect(() => {
+    if (!sidebarRef.current) return;
+
+    const updateWidth = () => {
+      if (sidebarRef.current) {
+        const width = sidebarRef.current.clientWidth - 32; // Subtract padding (p-4 = 16px * 2)
+        setSidebarWidth(width);
+      }
+    };
+
+    updateWidth();
+
+    const resizeObserver = new ResizeObserver(updateWidth);
+    resizeObserver.observe(sidebarRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
   }, []);
 
   const onSave = useCallback((code) => {
@@ -180,37 +203,34 @@ function App() {
         </button>
       </header>
       <main className="flex h-[calc(100vh-60px)]">
-        <div className="w-48 border-r border-gray-200 overflow-y-auto p-4">
+        <div ref={sidebarRef} className="w-48 border-r border-gray-200 overflow-y-auto p-4">
           <h2 className="text-sm font-semibold mb-3 text-gray-700">History</h2>
           {savedVersions.length === 0 ? (
             <p className="text-xs text-gray-500">No saved versions yet</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {savedVersions.map((version, index) => {
                 const isCurrent = currentVersionId === version.id;
                 return (
                   <div
                     key={version.id}
                     className={clsx(
-                      "text-xs p-2 rounded cursor-pointer transition-colors border flex items-center justify-between group",
+                      "rounded cursor-pointer transition-colors border overflow-hidden group relative",
                       isCurrent
-                        ? "bg-blue-50 border-blue-300 text-blue-900"
-                        : "border-transparent hover:border-gray-300 hover:bg-gray-100"
+                        ? "bg-blue-50 border-blue-300"
+                        : "border-transparent hover:border-gray-300 hover:bg-gray-50"
                     )}
                     title={version.code.substring(0, 50) + "..."}
                   >
-                    <div
-                      onClick={() => handleLoadVersion(version)}
-                      className={clsx("font-medium flex-1", isCurrent ? "text-blue-900" : "text-gray-700")}
-                    >
-                      {version.time}
+                    <div onClick={() => handleLoadVersion(version)} className="w-full relative">
+                      <Sketch code={version.code} width={sidebarWidth} />
                     </div>
                     <button
                       onClick={(e) => handleDeleteVersion(version.id, e)}
-                      className="opacity-0 group-hover:opacity-100 ml-2 p-1 hover:bg-red-100 rounded transition-opacity"
+                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1.5 bg-white hover:bg-red-100 rounded shadow-sm transition-opacity"
                       title="Delete version"
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                       </svg>
                     </button>
