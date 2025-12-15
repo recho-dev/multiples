@@ -36,7 +36,7 @@ function App() {
   const editorInstanceRef = useRef(null);
 
   const onSave = useCallback((code) => {
-    setCode(code);
+    // Save doesn't automatically run the code - only play button or slider does
   }, []);
 
   const onSliderChange = useCallback((code) => {
@@ -45,7 +45,6 @@ function App() {
 
   const onParamsChange = useCallback(({params, code, type}) => {
     setParams(params);
-    setCode(code);
     if (type === "params-update") setShowMultiples(params.length > 0);
   }, []);
 
