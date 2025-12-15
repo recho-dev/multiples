@@ -55,6 +55,7 @@ function App() {
   const [splitSizes, setSplitSizes] = useState([15, 35, 50]); // [history, editor, preview]
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveName, setSaveName] = useState("");
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const sidebarRef = useRef(null);
   const editorRef = useRef(null);
   const editorInstanceRef = useRef(null);
@@ -229,9 +230,52 @@ function App() {
     localStorage.setItem(SPLIT_SIZES_KEY, JSON.stringify(sizes));
   }, []);
 
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+    };
+  }, []);
+
+  const handleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.error("Error toggling fullscreen:", err);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen">
-      <header className="h-[80px] flex flex-col justify-center gap-1 px-4 py-4 border-b border-gray-200 bg-black">
+      <header className="h-[80px] flex flex-col justify-center gap-1 px-4 py-4 border-b border-gray-200 bg-black relative">
+        {!isFullscreen && (
+          <button
+            onClick={handleFullscreen}
+            className="absolute top-2 right-4 p-2 text-white hover:bg-gray-800 rounded transition-colors"
+            title="Enter fullscreen"
+            aria-label="Enter fullscreen"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+            </svg>
+          </button>
+        )}
         <h1 className="font-mono text-lg text-white">
           Let's draw a tree together with <strong>Recho Multiples</strong>!
         </h1>
