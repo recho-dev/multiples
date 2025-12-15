@@ -1,0 +1,45 @@
+.split {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.split > * {
+  overflow: hidden;
+}
+
+.gutter {
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: 50%;
+  flex-shrink: 0;
+  flex-grow: 0;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.gutter::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #e5e7eb;
+  transform: translateX(-50%);
+  transition: background-color 0.2s;
+}
+
+.gutter:hover::before {
+  background-color: #9ca3af;
+  width: 2px;
+}
+
+.gutter.gutter-horizontal {
+  cursor: col-resize;
+  background-image: none;
+}
+
+.cm-editor {
+  outline: none !important;
+}

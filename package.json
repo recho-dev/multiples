@@ -12,14 +12,18 @@
   "dependencies": {
     "@codemirror/commands": "^6.10.0",
     "@codemirror/lang-javascript": "^6.2.4",
+    "@codemirror/lint": "^6.9.2",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.38.7",
+    "canvas-confetti": "^1.9.4",
     "codemirror": "^6.0.2",
     "d3": "^7.9.0",
+    "eslint-linter-browserify": "^9.39.2",
     "htl": "^0.3.1",
     "p5": "^2.1.1",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-split": "^2.0.14"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

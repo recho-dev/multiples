@@ -8,7 +8,43 @@ function evalP5Code(parent, code) {
   return sketch;
 }
 
-export function Sketch({code}) {
+function scaleCanvas(canvas, containerWidth, containerHeight) {
+  if (!canvas) return;
+  const canvasWidth = canvas.width / (window.devicePixelRatio || 1);
+  const canvasHeight = canvas.height / (window.devicePixelRatio || 1);
+  if (!canvasWidth || !canvasHeight) return;
+
+  let scale;
+  let calculatedHeight;
+
+  if (containerHeight === undefined) {
+    // Width-only: preserve aspect ratio
+    scale = Math.min(containerWidth / canvasWidth, 1); // Don't scale up, only down
+    calculatedHeight = canvasHeight * scale;
+  } else {
+    // Both width and height: fit within container
+    const scaleX = containerWidth / canvasWidth;
+    const scaleY = containerHeight / canvasHeight;
+    scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+    calculatedHeight = containerHeight;
+  }
+
+  canvas.style.transform = `scale(${scale})`;
+  canvas.style.transformOrigin = "center center";
+  canvas.style.display = "block";
+
+  // Update container height if width-only
+  if (containerHeight === undefined) {
+    const parent = canvas.parentElement;
+    if (parent) {
+      parent.style.height = `${calculatedHeight}px`;
+    }
+  }
+
+  return calculatedHeight;
+}
+
+export function Sketch({code, width, height}) {
   const sketchRef = useRef(null);
   const p5InstanceRef = useRef(null);
   const [error, setError] = useState(null);
@@ -20,8 +56,49 @@ export function Sketch({code}) {
 
     try {
       const parent = document.createElement("div");
+      if (width !== undefined) {
+        parent.style.width = `${width}px`;
+        parent.style.overflow = "hidden";
+        parent.style.display = "flex";
+        parent.style.alignItems = "center";
+        parent.style.justifyContent = "center";
+        parent.style.position = "relative";
+        if (height !== undefined) {
+          parent.style.height = `${height}px`;
+        }
+      }
       sketchRef.current.appendChild(parent);
+
       p5InstanceRef.current = evalP5Code(parent, code);
+
+      // Observe canvas creation and size changes
+      const mutationObserver = new MutationObserver(() => {
+        const canvas = parent.querySelector("canvas");
+        if (canvas) {
+          if (width !== undefined) {
+            // Scale the canvas to fit within the container
+            requestAnimationFrame(() => {
+              scaleCanvas(canvas, width, height);
+            });
+
+            // Watch for canvas resize
+            const resizeObserver = new ResizeObserver(() => {
+              requestAnimationFrame(() => {
+                scaleCanvas(canvas, width, height);
+              });
+            });
+            resizeObserver.observe(canvas);
+
+            // Store for cleanup
+            parent._resizeObserver = resizeObserver;
+          }
+          mutationObserver.disconnect();
+        }
+      });
+      mutationObserver.observe(parent, {childList: true, subtree: true});
+
+      // Store for cleanup
+      parent._mutationObserver = mutationObserver;
     } catch (err) {
       console.error("Error executing sketch code:", err);
       setError(err.message || "An error occurred");
@@ -32,8 +109,14 @@ export function Sketch({code}) {
         p5InstanceRef.current.remove();
         p5InstanceRef.current = null;
       }
+      // Cleanup observers
+      const parent = sketchRef.current?.firstChild;
+      if (parent) {
+        parent._mutationObserver?.disconnect();
+        parent._resizeObserver?.disconnect();
+      }
     };
-  }, [code]);
+  }, [code, width, height]);
 
   return (
     <>
