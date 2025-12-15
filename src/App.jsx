@@ -13,7 +13,6 @@ let angleLeft = -Math.PI / 6;
 p.setup = () => {
   p.createCanvas(200, 200);
   p.background(0, 0, 0);
-  p.stroke(255);
   p.translate(p.width / 2, p.height);
   branch(60, 1, 0);
 };
@@ -294,56 +293,58 @@ function App() {
           direction="horizontal"
           snapOffset={0}
         >
-          <div ref={sidebarRef} className="overflow-y-auto px-4 py-2">
-            <div className="mb-2">
+          <div className="h-full flex flex-col overflow-hidden">
+            <div className="px-4 py-2 border-b border-gray-200 flex-shrink-0">
               <span>History</span>
             </div>
-            {savedVersions.length === 0 ? (
-              <p className="text-xs text-gray-500">No saved versions yet</p>
-            ) : (
-              <div className="space-y-3">
-                {savedVersions.map((version, index) => {
-                  const isCurrent = currentVersionId === version.id;
-                  return (
-                    <div
-                      key={version.id}
-                      className={clsx(
-                        "rounded cursor-pointer transition-colors border overflow-hidden group relative",
-                        isCurrent
-                          ? "bg-blue-50 border-blue-300"
-                          : "border-transparent hover:border-gray-300 hover:bg-gray-50"
-                      )}
-                      title={version.code.substring(0, 50) + "..."}
-                    >
-                      <div onClick={() => handleLoadVersion(version)} className="w-full relative">
-                        <Sketch code={version.code} width={sidebarWidth} />
-                        {version.name && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs px-2 py-1">
-                            {version.name}
-                          </div>
+            <div ref={sidebarRef} className="flex-1 overflow-y-auto px-4 py-2">
+              {savedVersions.length === 0 ? (
+                <p className="text-xs text-gray-500">No saved versions yet</p>
+              ) : (
+                <div className="space-y-3">
+                  {savedVersions.map((version, index) => {
+                    const isCurrent = currentVersionId === version.id;
+                    return (
+                      <div
+                        key={version.id}
+                        className={clsx(
+                          "rounded cursor-pointer transition-colors border overflow-hidden group relative",
+                          isCurrent
+                            ? "bg-blue-50 border-blue-300"
+                            : "border-transparent hover:border-gray-300 hover:bg-gray-50"
                         )}
-                      </div>
-                      <button
-                        onClick={(e) => handleDeleteVersion(version.id, e)}
-                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1.5 bg-white hover:bg-red-100 rounded shadow-sm transition-opacity"
-                        title="Delete version"
+                        title={version.code.substring(0, 50) + "..."}
                       >
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
+                        <div onClick={() => handleLoadVersion(version)} className="w-full relative">
+                          <Sketch code={version.code} width={sidebarWidth} />
+                          {version.name && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs px-2 py-1">
+                              {version.name}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => handleDeleteVersion(version.id, e)}
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1.5 bg-white hover:bg-red-100 rounded shadow-sm transition-opacity"
+                          title="Delete version"
                         >
-                          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
           <div className="h-full flex flex-col">
             <div className="flex items-center gap-2 p-2 border-b border-dashed border-gray-200">
