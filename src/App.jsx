@@ -52,6 +52,8 @@ function App() {
   const [currentVersionId, setCurrentVersionId] = useState(null);
   const [sidebarWidth, setSidebarWidth] = useState(176);
   const [splitSizes, setSplitSizes] = useState([15, 35, 50]); // [history, editor, preview]
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveName, setSaveName] = useState("");
   const sidebarRef = useRef(null);
   const editorRef = useRef(null);
   const editorInstanceRef = useRef(null);
@@ -152,6 +154,11 @@ function App() {
   }, []);
 
   const handleSave = useCallback(() => {
+    setShowSaveModal(true);
+    setSaveName("");
+  }, []);
+
+  const handleSaveSubmit = useCallback(() => {
     if (editorInstanceRef.current) {
       const currentCode = editorInstanceRef.current.getCode();
       const newVersion = {
@@ -160,13 +167,21 @@ function App() {
         code: currentCode,
         timestamp: new Date().toISOString(),
         time: new Date().toLocaleString(),
+        name: saveName.trim() || null,
       };
       const updatedVersions = [newVersion, ...savedVersions];
       setSavedVersions(updatedVersions);
       setCurrentVersionId(newVersion.id);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedVersions));
+      setShowSaveModal(false);
+      setSaveName("");
     }
-  }, [savedVersions, currentVersionId]);
+  }, [savedVersions, currentVersionId, saveName]);
+
+  const handleCloseModal = useCallback(() => {
+    setShowSaveModal(false);
+    setSaveName("");
+  }, []);
 
   const handleLoadVersion = useCallback((version) => {
     if (editorInstanceRef.current) {
@@ -250,6 +265,11 @@ function App() {
                     >
                       <div onClick={() => handleLoadVersion(version)} className="w-full relative">
                         <Sketch code={version.code} width={sidebarWidth} />
+                        {version.name && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs px-2 py-1">
+                            {version.name}
+                          </div>
+                        )}
                       </div>
                       <button
                         onClick={(e) => handleDeleteVersion(version.id, e)}
@@ -321,6 +341,50 @@ function App() {
           </div>
         </Split>
       </main>
+      {showSaveModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{backgroundColor: "rgba(0, 0, 0, 0.8)"}}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 relative">
+            <button
+              onClick={handleCloseModal}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+              title="Close"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+            <h2 className="text-lg font-semibold mb-4">Save Version</h2>
+            <div className="mb-4">
+              <label htmlFor="save-name" className="block text-sm font-medium text-gray-700 mb-2">
+                Your Name (optional)
+              </label>
+              <input
+                id="save-name"
+                type="text"
+                value={saveName}
+                onChange={(e) => setSaveName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                placeholder="Enter your name"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSaveSubmit();
+                  } else if (e.key === "Escape") {
+                    handleCloseModal();
+                  }
+                }}
+              />
+            </div>
+            <button
+              onClick={handleSaveSubmit}
+              className="w-full bg-black text-white py-2 px-4 rounded-md hover:bg-gray-800 transition-colors"
+            >
+              {saveName.trim() ? "Submit With Name" : "Submit Without Name"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
