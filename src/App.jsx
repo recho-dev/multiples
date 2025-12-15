@@ -214,7 +214,9 @@ function App() {
           snapOffset={0}
         >
           <div ref={sidebarRef} className="overflow-y-auto px-4 py-2">
-            <h2 className="text-sm font-semibold mb-3 text-gray-700">History</h2>
+            <div className="mb-2">
+              <span>History</span>
+            </div>
             {savedVersions.length === 0 ? (
               <p className="text-xs text-gray-500">No saved versions yet</p>
             ) : (
