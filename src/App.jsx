@@ -6,25 +6,33 @@ import {Multiples} from "./Multiples.jsx";
 import {createEditor} from "./editor/index.js";
 import {clsx} from "./clsx.js";
 
-const initialCode = `let angle = Math.PI / 6;
+const initialCode = `let angleRight = Math.PI / 6;
+let angleLeft = -Math.PI / 6;
 
 p.setup = () => {
   p.createCanvas(200, 200);
-  p.background(0);
+  p.background(0, 0, 0);
   p.stroke(255);
   p.translate(p.width / 2, p.height);
-  branch(60, 0);
+  branch(60, 1, 0);
 };
 
-function branch(len, rotate) {
-  if (len < 10) return;
+function branch(len, strokeWeight, rotate) {
+  if (len < 10) {
+    p.fill(255, 255, 255);
+    p.circle(0, 0, 5);
+    return;
+  }
   p.push();
   p.rotate(rotate);
+  p.stroke(255, 255, 255);
+  p.strokeWeight(strokeWeight);
   p.line(0, -len, 0, 0);
   p.translate(0, -len);
   len *= 0.66;
-  branch(len, -angle);
-  branch(len, angle);
+  strokeWeight *= 0.66;
+  branch(len, strokeWeight, angleLeft);
+  branch(len, strokeWeight, angleRight);
   p.pop();
 }
 `;
