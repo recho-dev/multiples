@@ -7,10 +7,7 @@ import {createEditor} from "./editor/index.js";
 import {clsx} from "./clsx.js";
 import confetti from "canvas-confetti";
 
-const initialCode = `let angleRight = Math.PI / 6;
-let angleLeft = -Math.PI / 6;
-
-p.setup = () => {
+const initialCode = `p.setup = () => {
   p.createCanvas(200, 200);
   p.background(0, 0, 0);
   p.translate(p.width / 2, p.height);
@@ -29,11 +26,15 @@ function branch(len, strokeWeight, rotate) {
   p.strokeWeight(strokeWeight);
   p.line(0, -len, 0, 0);
   p.translate(0, -len);
-  len *= 0.66;
-  strokeWeight *= 0.66;
-  branch(len, strokeWeight, angleLeft);
-  branch(len, strokeWeight, angleRight);
+  len = len * safe(0.66);
+  strokeWeight = strokeWeight * safe(0.66);
+  branch(len, strokeWeight, -Math.PI / 6);
+  branch(len, strokeWeight, Math.PI / 6);
   p.pop();
+}
+
+function safe(value) {
+  return p.constrain(value, 0.3, 0.9);
 }
 `;
 
