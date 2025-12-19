@@ -5,44 +5,39 @@ import {Sketch} from "./Sketch.jsx";
 import {Multiples} from "./Multiples.jsx";
 import {createEditor} from "./editor/index.js";
 import {clsx} from "./clsx.js";
-import confetti from "canvas-confetti";
-import {loadVersions, saveVersion, deleteVersion, getMetadata, setMetadata} from "./storage.js";
+import friendlyWords from "friendly-words";
+import {
+  saveVersion,
+  deleteVersion,
+  getMetadata,
+  setMetadata,
+  loadSketches,
+  saveSketch,
+  deleteSketch,
+  getSketch,
+  setSelectedVersion,
+} from "./storage.js";
 
 const initialCode = `p.setup = () => {
-  p.createCanvas(200, 200);
-  p.background(0, 0, 0);
-  p.translate(p.width / 2, p.height);
-  branch(60, 1, 0);
+  p.createCanvas(400, 400);
 };
 
-function branch(len, strokeWeight, rotate) {
-  if (len < 10) {
-    p.fill(255, 255, 255);
-    p.circle(0, 0, 5);
-    return;
-  }
-  p.push();
-  p.rotate(rotate);
-  p.stroke(255, 255, 255);
-  p.strokeWeight(strokeWeight);
-  p.line(0, -len, 0, 0);
-  p.translate(0, -len);
-  len = len * safe(0.66);
-  strokeWeight = strokeWeight * safe(0.66);
-  branch(len, strokeWeight, -Math.PI / 6);
-  branch(len, strokeWeight, Math.PI / 6);
-  p.pop();
-}
-
-function safe(value) {
-  return p.constrain(value, 0.3, 0.9);
-}
+p.draw = () => {
+  p.background(220);
+};
 `;
 
 const SPLIT_SIZES_KEY = "recho-multiples-split-sizes";
 
 function uid() {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+function generateFriendlyName() {
+  const predicate = friendlyWords.predicates[Math.floor(Math.random() * friendlyWords.predicates.length)];
+  const object = friendlyWords.objects[Math.floor(Math.random() * friendlyWords.objects.length)];
+  const num = Math.floor(Math.random() * 100);
+  return `${predicate}-${object}-${num}`;
 }
 
 function App() {
@@ -53,9 +48,13 @@ function App() {
   const [currentVersionId, setCurrentVersionId] = useState(null);
   const [sidebarWidth, setSidebarWidth] = useState(176);
   const [splitSizes, setSplitSizes] = useState([15, 35, 50]); // [history, editor, preview]
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [saveName, setSaveName] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentSketchId, setCurrentSketchId] = useState(null);
+  const [currentSketchName, setCurrentSketchName] = useState(null);
+  const [showOpenModal, setShowOpenModal] = useState(false);
+  const [availableSketches, setAvailableSketches] = useState([]);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editingNameValue, setEditingNameValue] = useState("");
   const sidebarRef = useRef(null);
   const editorRef = useRef(null);
   const editorInstanceRef = useRef(null);
@@ -64,18 +63,57 @@ function App() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load versions from IndexedDB
-        const versions = await loadVersions();
-        setSavedVersions(versions);
-        // Set the latest version as current by default
-        if (versions.length > 0) {
-          setCurrentVersionId(versions[0].id);
-        }
-
         // Load split sizes from IndexedDB
         const sizes = await getMetadata(SPLIT_SIZES_KEY);
         if (Array.isArray(sizes) && sizes.length === 3) {
           setSplitSizes(sizes);
+        }
+
+        // Create a default sketch if none exists
+        const sketches = await loadSketches();
+        if (sketches.length === 0) {
+          const newSketchId = uid();
+          const newSketchName = generateFriendlyName();
+          await saveSketch({
+            id: newSketchId,
+            name: newSketchName,
+            timestamp: new Date().toISOString(),
+            versions: [],
+            selectedVersion: null,
+          });
+          setCurrentSketchId(newSketchId);
+          setCurrentSketchName(newSketchName);
+        } else {
+          // Load the most recent sketch
+          const latestSketch = sketches[0];
+          setCurrentSketchId(latestSketch.id);
+          setCurrentSketchName(latestSketch.name);
+          // Load versions from sketch
+          const versions = latestSketch.versions || [];
+          setSavedVersions(versions);
+          // Load selected version or first version
+          if (latestSketch.selectedVersion) {
+            const selected = versions.find((v) => v.id === latestSketch.selectedVersion);
+            if (selected) {
+              setCurrentVersionId(selected.id);
+              setCode(selected.code);
+              if (editorInstanceRef.current) {
+                editorInstanceRef.current.setCode(selected.code);
+              }
+            } else if (versions.length > 0) {
+              setCurrentVersionId(versions[0].id);
+              setCode(versions[0].code);
+              if (editorInstanceRef.current) {
+                editorInstanceRef.current.setCode(versions[0].code);
+              }
+            }
+          } else if (versions.length > 0) {
+            setCurrentVersionId(versions[0].id);
+            setCode(versions[0].code);
+            if (editorInstanceRef.current) {
+              editorInstanceRef.current.setCode(versions[0].code);
+            }
+          }
         }
       } catch (e) {
         console.error("Failed to load data:", e);
@@ -84,6 +122,51 @@ function App() {
 
     loadData();
   }, []);
+
+  // Reload versions when sketch changes
+  useEffect(() => {
+    if (currentSketchId) {
+      const loadSketchData = async () => {
+        try {
+          const sketch = await getSketch(currentSketchId);
+          if (sketch) {
+            const versions = sketch.versions || [];
+            setSavedVersions(versions);
+            // Load selected version or first version
+            if (sketch.selectedVersion) {
+              const selected = versions.find((v) => v.id === sketch.selectedVersion);
+              if (selected) {
+                setCurrentVersionId(selected.id);
+                setCode(selected.code);
+                if (editorInstanceRef.current) {
+                  editorInstanceRef.current.setCode(selected.code);
+                }
+              } else if (versions.length > 0) {
+                setCurrentVersionId(versions[0].id);
+                setCode(versions[0].code);
+                if (editorInstanceRef.current) {
+                  editorInstanceRef.current.setCode(versions[0].code);
+                }
+              } else {
+                setCurrentVersionId(null);
+              }
+            } else if (versions.length > 0) {
+              setCurrentVersionId(versions[0].id);
+              setCode(versions[0].code);
+              if (editorInstanceRef.current) {
+                editorInstanceRef.current.setCode(versions[0].code);
+              }
+            } else {
+              setCurrentVersionId(null);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to load sketch data:", e);
+        }
+      };
+      loadSketchData();
+    }
+  }, [currentSketchId]);
 
   // Measure sidebar width
   useEffect(() => {
@@ -150,81 +233,111 @@ function App() {
     }
   }, []);
 
-  const handleSave = useCallback(() => {
-    setShowSaveModal(true);
-    setSaveName("");
-  }, []);
-
-  const handleSaveSubmit = useCallback(async () => {
-    if (editorInstanceRef.current) {
+  const handleSave = useCallback(async () => {
+    if (editorInstanceRef.current && currentSketchId) {
       const currentCode = editorInstanceRef.current.getCode();
 
-      const newVersion = {
-        id: uid(),
-        parentId: currentVersionId, // Track which version this was derived from
-        code: currentCode,
-        timestamp: new Date().toISOString(),
-        time: new Date().toLocaleString(),
-        name: saveName.trim() || null,
-      };
+      // Check if code has changed from the current version
+      if (currentVersionId) {
+        const currentVersion = savedVersions.find((v) => v.id === currentVersionId);
+        if (currentVersion && currentVersion.code === currentCode) {
+          // Code hasn't changed, no need to save
+          return;
+        }
+      }
 
       try {
-        // Save to IndexedDB
-        await saveVersion(newVersion);
+        // Check if sketch exists in localStorage, if not, save it first
+        const existingSketch = await getSketch(currentSketchId);
+        if (!existingSketch) {
+          // Sketch doesn't exist yet, save it first
+          await saveSketch({
+            id: currentSketchId,
+            name: currentSketchName,
+            timestamp: new Date().toISOString(),
+            versions: [],
+            selectedVersion: null,
+          });
+        }
 
-        // Reload all versions to get the updated list
-        const updatedVersions = await loadVersions();
-        setSavedVersions(updatedVersions);
-        setCurrentVersionId(newVersion.id);
-        setShowSaveModal(false);
-        setSaveName("");
+        const newVersion = {
+          id: uid(),
+          parentId: currentVersionId, // Track which version this was derived from
+          code: currentCode,
+          timestamp: new Date().toISOString(),
+          time: new Date().toLocaleString(),
+          name: null,
+        };
 
-        // Trigger confetti animation
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: {y: 0.6},
-        });
+        // Save version to sketch
+        await saveVersion(currentSketchId, newVersion);
+
+        // Reload sketch to get updated versions
+        const sketch = await getSketch(currentSketchId);
+        if (sketch) {
+          const updatedVersions = sketch.versions || [];
+          setSavedVersions(updatedVersions);
+          setCurrentVersionId(newVersion.id);
+        }
       } catch (error) {
         console.error("Failed to save version:", error);
         alert("Failed to save version. Please try again.");
       }
     }
-  }, [savedVersions, currentVersionId, saveName]);
+  }, [currentSketchId, currentSketchName, currentVersionId, savedVersions]);
 
-  const handleCloseModal = useCallback(() => {
-    setShowSaveModal(false);
-    setSaveName("");
-  }, []);
-
-  const handleLoadVersion = useCallback((version) => {
-    if (editorInstanceRef.current) {
-      editorInstanceRef.current.setCode(version.code);
-      setCode(version.code);
-      setCurrentVersionId(version.id);
-    }
-  }, []);
+  const handleLoadVersion = useCallback(
+    async (version) => {
+      if (editorInstanceRef.current && currentSketchId) {
+        editorInstanceRef.current.setCode(version.code);
+        setCode(version.code);
+        setCurrentVersionId(version.id);
+        // Update selected version in sketch
+        await setSelectedVersion(currentSketchId, version.id);
+      }
+    },
+    [currentSketchId]
+  );
 
   const handleDeleteVersion = useCallback(
     async (versionId, e) => {
       e.stopPropagation(); // Prevent triggering the load version action
       if (window.confirm("Are you sure you want to delete this version?")) {
         try {
-          await deleteVersion(versionId);
-          // Reload all versions
-          const updatedVersions = await loadVersions();
-          setSavedVersions(updatedVersions);
-          // If we deleted the current version, set currentVersionId to the first available version or null
-          if (currentVersionId === versionId) {
-            if (updatedVersions.length > 0) {
-              setCurrentVersionId(updatedVersions[0].id);
-              // Optionally load the first version's code
-              if (editorInstanceRef.current) {
-                editorInstanceRef.current.setCode(updatedVersions[0].code);
-                setCode(updatedVersions[0].code);
+          await deleteVersion(currentSketchId, versionId);
+          // Reload sketch to get updated versions
+          const sketch = await getSketch(currentSketchId);
+          if (sketch) {
+            const updatedVersions = sketch.versions || [];
+            setSavedVersions(updatedVersions);
+            // If we deleted the current version, set currentVersionId to the selected version or first available
+            if (currentVersionId === versionId) {
+              if (sketch.selectedVersion) {
+                const selected = updatedVersions.find((v) => v.id === sketch.selectedVersion);
+                if (selected) {
+                  setCurrentVersionId(selected.id);
+                  if (editorInstanceRef.current) {
+                    editorInstanceRef.current.setCode(selected.code);
+                    setCode(selected.code);
+                  }
+                } else if (updatedVersions.length > 0) {
+                  setCurrentVersionId(updatedVersions[0].id);
+                  if (editorInstanceRef.current) {
+                    editorInstanceRef.current.setCode(updatedVersions[0].code);
+                    setCode(updatedVersions[0].code);
+                  }
+                } else {
+                  setCurrentVersionId(null);
+                }
+              } else if (updatedVersions.length > 0) {
+                setCurrentVersionId(updatedVersions[0].id);
+                if (editorInstanceRef.current) {
+                  editorInstanceRef.current.setCode(updatedVersions[0].code);
+                  setCode(updatedVersions[0].code);
+                }
+              } else {
+                setCurrentVersionId(null);
               }
-            } else {
-              setCurrentVersionId(null);
             }
           }
         } catch (error) {
@@ -233,7 +346,7 @@ function App() {
         }
       }
     },
-    [savedVersions, currentVersionId]
+    [currentSketchId, currentVersionId]
   );
 
   const handleSplitChange = useCallback(async (sizes) => {
@@ -294,6 +407,118 @@ function App() {
     URL.revokeObjectURL(url);
   }, [savedVersions]);
 
+  const handleNewSketch = useCallback(() => {
+    const newSketchId = uid();
+    const newSketchName = generateFriendlyName();
+    // Create sketch in memory only, don't save to localStorage yet
+    setCurrentSketchId(newSketchId);
+    setCurrentSketchName(newSketchName);
+    setCode(initialCode);
+    if (editorInstanceRef.current) {
+      editorInstanceRef.current.setCode(initialCode);
+    }
+    setCurrentVersionId(null);
+    setSavedVersions([]);
+  }, []);
+
+  const handleOpenSketch = useCallback(async () => {
+    try {
+      const sketches = await loadSketches();
+      setAvailableSketches(sketches);
+      setShowOpenModal(true);
+    } catch (error) {
+      console.error("Failed to load sketches:", error);
+      alert("Failed to load sketches. Please try again.");
+    }
+  }, []);
+
+  const handleStartEditName = useCallback(() => {
+    setIsEditingName(true);
+    setEditingNameValue(currentSketchName || "");
+  }, [currentSketchName]);
+
+  const handleSaveName = useCallback(async () => {
+    if (!currentSketchId) return;
+
+    const newName = editingNameValue.trim();
+    if (newName === currentSketchName) {
+      // Name hasn't changed
+      setIsEditingName(false);
+      return;
+    }
+
+    if (newName === "") {
+      // Empty name, revert
+      setIsEditingName(false);
+      return;
+    }
+
+    try {
+      const sketch = await getSketch(currentSketchId);
+      if (sketch) {
+        sketch.name = newName;
+        await saveSketch(sketch);
+        setCurrentSketchName(newName);
+      } else {
+        // Sketch doesn't exist yet, just update the state
+        setCurrentSketchName(newName);
+      }
+      setIsEditingName(false);
+    } catch (error) {
+      console.error("Failed to save sketch name:", error);
+      setIsEditingName(false);
+    }
+  }, [currentSketchId, editingNameValue, currentSketchName]);
+
+  const handleSelectSketch = useCallback(async (sketch) => {
+    try {
+      setCurrentSketchId(sketch.id);
+      setCurrentSketchName(sketch.name);
+      setShowOpenModal(false);
+      // Versions will be loaded by the useEffect that watches currentSketchId
+    } catch (error) {
+      console.error("Failed to load sketch:", error);
+      alert("Failed to load sketch. Please try again.");
+    }
+  }, []);
+
+  const handleDeleteSketch = useCallback(
+    async (sketchId, e) => {
+      e.stopPropagation(); // Prevent triggering the select action
+      if (window.confirm("Are you sure you want to delete this sketch? All versions will also be deleted.")) {
+        try {
+          await deleteSketch(sketchId);
+          // Reload sketches list
+          const sketches = await loadSketches();
+          setAvailableSketches(sketches);
+          // If we deleted the current sketch, switch to the first available or create new
+          if (currentSketchId === sketchId) {
+            if (sketches.length > 0) {
+              setCurrentSketchId(sketches[0].id);
+              setCurrentSketchName(sketches[0].name);
+            } else {
+              // Create a new sketch in memory if none remain (don't save until user clicks save)
+              const newSketchId = uid();
+              const newSketchName = generateFriendlyName();
+              setCurrentSketchId(newSketchId);
+              setCurrentSketchName(newSketchName);
+              setCode(initialCode);
+              if (editorInstanceRef.current) {
+                editorInstanceRef.current.setCode(initialCode);
+              }
+              setCurrentVersionId(null);
+              setSavedVersions([]);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to delete sketch:", error);
+          alert("Failed to delete sketch. Please try again.");
+        }
+      }
+    },
+    [currentSketchId]
+  );
+
   return (
     <div className="min-h-screen">
       <header className="h-[50px] flex flex-col justify-center px-4 py-2 border-b border-gray-200 bg-black relative">
@@ -309,9 +534,27 @@ function App() {
             </svg>
           </button>
         )}
-        <h1 className="font-mono text-lg text-white">
-          <strong>Recho Multiples</strong>
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="font-mono text-lg text-white">
+            <strong>Recho Multiples</strong>
+          </h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleNewSketch}
+              className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm"
+              title="New Sketch"
+            >
+              New
+            </button>
+            <button
+              onClick={handleOpenSketch}
+              className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm"
+              title="Open Sketch"
+            >
+              Open
+            </button>
+          </div>
+        </div>
       </header>
       <main className="h-[calc(100vh-50px)]">
         <Split
@@ -412,6 +655,33 @@ function App() {
                   <polyline points="7 3 7 8 15 8" />
                 </svg>
               </button>
+              {currentSketchName &&
+                (isEditingName ? (
+                  <input
+                    type="text"
+                    value={editingNameValue}
+                    onChange={(e) => setEditingNameValue(e.target.value)}
+                    onBlur={handleSaveName}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.target.blur();
+                      } else if (e.key === "Escape") {
+                        setIsEditingName(false);
+                        setEditingNameValue(currentSketchName);
+                      }
+                    }}
+                    className="ml-2 text-sm text-gray-600 font-medium bg-transparent border border-gray-400 focus:outline-none focus:border-gray-600 px-1 rounded"
+                    autoFocus
+                  />
+                ) : (
+                  <span
+                    onClick={handleStartEditName}
+                    className="ml-2 text-sm text-gray-600 font-medium cursor-pointer hover:text-gray-800 hover:border hover:border-gray-400 hover:px-1 rounded"
+                    title="Click to edit name"
+                  >
+                    {currentSketchName}
+                  </span>
+                ))}
             </div>
             <div ref={editorRef} className="flex-1" />
           </div>
@@ -438,14 +708,14 @@ function App() {
           </div>
         </Split>
       </main>
-      {showSaveModal && (
+      {showOpenModal && (
         <div
           className="fixed inset-0 flex items-center justify-center z-50"
           style={{backgroundColor: "rgba(0, 0, 0, 0.8)"}}
         >
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 relative">
+          <div className="bg-white  p-6 max-w-md w-full mx-4 relative max-h-[80vh] overflow-y-auto">
             <button
-              onClick={handleCloseModal}
+              onClick={() => setShowOpenModal(false)}
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
               title="Close"
             >
@@ -454,34 +724,33 @@ function App() {
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
-            <h2 className="text-lg font-semibold mb-4">Save Version</h2>
-            <div className="mb-4">
-              <label htmlFor="save-name" className="block text-sm font-medium text-gray-700 mb-2">
-                Your Name (optional)
-              </label>
-              <input
-                id="save-name"
-                type="text"
-                value={saveName}
-                onChange={(e) => setSaveName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                placeholder="Enter your name"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleSaveSubmit();
-                  } else if (e.key === "Escape") {
-                    handleCloseModal();
-                  }
-                }}
-              />
-            </div>
-            <button
-              onClick={handleSaveSubmit}
-              className="w-full bg-black text-white py-2 px-4 rounded-md hover:bg-gray-800 transition-colors"
-            >
-              {saveName.trim() ? "Submit With Name" : "Submit Without Name"}
-            </button>
+            <h2 className="text-lg font-semibold mb-4">Open Sketch</h2>
+            {availableSketches.length === 0 ? (
+              <p className="text-gray-500">No sketches available</p>
+            ) : (
+              <div className="space-y-2">
+                {availableSketches.map((sketch) => (
+                  <div
+                    key={sketch.id}
+                    className="w-full px-4 py-3 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-between group"
+                  >
+                    <button onClick={() => handleSelectSketch(sketch)} className="flex-1 text-left">
+                      <div className="font-medium">{sketch.name}</div>
+                      <div className="text-xs text-gray-500">{new Date(sketch.timestamp).toLocaleString()}</div>
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteSketch(sketch.id, e)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
+                      title="Delete sketch"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

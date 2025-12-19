@@ -1,76 +1,91 @@
 /**
- * IndexedDB storage for version control
- * Stores all versions directly with full code
+ * localStorage storage for version control
+ * Sketches contain versions array and selectedVersion field
  */
 
-const DB_NAME = "recho-multiples-db";
-const DB_VERSION = 1;
-const STORE_VERSIONS = "versions";
-const STORE_METADATA = "metadata";
+const STORAGE_KEY_SKETCHES = "recho-multiples-sketches";
+const STORAGE_KEY_METADATA = "recho-multiples-metadata";
 
 /**
- * Initialize IndexedDB
+ * Load all sketches from localStorage
  */
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-
-      // Create versions store
-      if (!db.objectStoreNames.contains(STORE_VERSIONS)) {
-        const versionStore = db.createObjectStore(STORE_VERSIONS, {keyPath: "id"});
-        versionStore.createIndex("timestamp", "timestamp", {unique: false});
-        versionStore.createIndex("parentId", "parentId", {unique: false});
-      }
-
-      // Create metadata store
-      if (!db.objectStoreNames.contains(STORE_METADATA)) {
-        db.createObjectStore(STORE_METADATA, {keyPath: "key"});
-      }
-    };
-  });
-}
-
-/**
- * Load all versions from IndexedDB
- */
-export async function loadVersions() {
+export async function loadSketches() {
   try {
-    const db = await openDB();
-    const transaction = db.transaction([STORE_VERSIONS], "readonly");
-    const store = transaction.objectStore(STORE_VERSIONS);
-    const request = store.getAll();
-
-    return new Promise((resolve, reject) => {
-      request.onsuccess = () => {
-        const versions = request.result || [];
-
-        // Sort by timestamp descending (newest first)
-        versions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-        resolve(versions);
-      };
-      request.onerror = () => reject(request.error);
-    });
+    const saved = localStorage.getItem(STORAGE_KEY_SKETCHES);
+    if (!saved) {
+      return [];
+    }
+    const sketches = JSON.parse(saved);
+    // Sort by timestamp descending (newest first)
+    sketches.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return sketches;
   } catch (error) {
-    console.error("Failed to load versions from IndexedDB:", error);
+    console.error("Failed to load sketches from localStorage:", error);
     return [];
   }
 }
 
 /**
- * Save a new version
+ * Get a sketch by ID
  */
-export async function saveVersion(version) {
+export async function getSketch(sketchId) {
   try {
-    const db = await openDB();
-    const transaction = db.transaction([STORE_VERSIONS], "readwrite");
-    const store = transaction.objectStore(STORE_VERSIONS);
+    const sketches = await loadSketches();
+    return sketches.find((s) => s.id === sketchId) || null;
+  } catch (error) {
+    console.error("Failed to get sketch from localStorage:", error);
+    return null;
+  }
+}
+
+/**
+ * Save a sketch (with versions array and selectedVersion)
+ */
+export async function saveSketch(sketch) {
+  try {
+    const sketches = await loadSketches();
+    const existingIndex = sketches.findIndex((s) => s.id === sketch.id);
+    if (existingIndex >= 0) {
+      sketches[existingIndex] = sketch;
+    } else {
+      sketches.push(sketch);
+    }
+    localStorage.setItem(STORAGE_KEY_SKETCHES, JSON.stringify(sketches));
+    return sketch;
+  } catch (error) {
+    console.error("Failed to save sketch to localStorage:", error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a sketch
+ */
+export async function deleteSketch(sketchId) {
+  try {
+    const sketches = await loadSketches();
+    const filtered = sketches.filter((s) => s.id !== sketchId);
+    localStorage.setItem(STORAGE_KEY_SKETCHES, JSON.stringify(filtered));
+  } catch (error) {
+    console.error("Failed to delete sketch from localStorage:", error);
+    throw error;
+  }
+}
+
+/**
+ * Add a version to a sketch
+ */
+export async function saveVersion(sketchId, version) {
+  try {
+    const sketch = await getSketch(sketchId);
+    if (!sketch) {
+      throw new Error(`Sketch ${sketchId} not found`);
+    }
+
+    // Ensure versions array exists
+    if (!sketch.versions) {
+      sketch.versions = [];
+    }
 
     const versionToStore = {
       id: version.id,
@@ -81,53 +96,73 @@ export async function saveVersion(version) {
       code: version.code,
     };
 
-    await store.put(versionToStore);
+    // Add or update version
+    const existingIndex = sketch.versions.findIndex((v) => v.id === versionToStore.id);
+    if (existingIndex >= 0) {
+      sketch.versions[existingIndex] = versionToStore;
+    } else {
+      sketch.versions.push(versionToStore);
+      // Sort versions by timestamp descending (newest first)
+      sketch.versions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    }
+
+    // Update selectedVersion to the newly saved version
+    sketch.selectedVersion = versionToStore.id;
+
+    await saveSketch(sketch);
     return versionToStore;
   } catch (error) {
-    console.error("Failed to save version to IndexedDB:", error);
+    console.error("Failed to save version to sketch:", error);
     throw error;
   }
 }
 
 /**
- * Save multiple versions (for migration)
+ * Delete a version from a sketch
  */
-export async function saveVersions(versions) {
+export async function deleteVersion(sketchId, versionId) {
   try {
-    const db = await openDB();
-    const transaction = db.transaction([STORE_VERSIONS], "readwrite");
-    const store = transaction.objectStore(STORE_VERSIONS);
+    const sketch = await getSketch(sketchId);
+    if (!sketch) {
+      throw new Error(`Sketch ${sketchId} not found`);
+    }
 
-    // Store all versions with full code
-    await Promise.all(
-      versions.map((version) =>
-        store.put({
-          id: version.id,
-          parentId: version.parentId || null,
-          timestamp: version.timestamp,
-          time: version.time,
-          name: version.name,
-          code: version.code,
-        })
-      )
-    );
+    if (!sketch.versions) {
+      return;
+    }
+
+    sketch.versions = sketch.versions.filter((v) => v.id !== versionId);
+
+    // If deleted version was selected, select the first remaining version or null
+    if (sketch.selectedVersion === versionId) {
+      if (sketch.versions.length > 0) {
+        sketch.selectedVersion = sketch.versions[0].id;
+      } else {
+        sketch.selectedVersion = null;
+      }
+    }
+
+    await saveSketch(sketch);
   } catch (error) {
-    console.error("Failed to save versions to IndexedDB:", error);
+    console.error("Failed to delete version from sketch:", error);
     throw error;
   }
 }
 
 /**
- * Delete a version
+ * Set selected version for a sketch
  */
-export async function deleteVersion(versionId) {
+export async function setSelectedVersion(sketchId, versionId) {
   try {
-    const db = await openDB();
-    const transaction = db.transaction([STORE_VERSIONS], "readwrite");
-    const store = transaction.objectStore(STORE_VERSIONS);
-    await store.delete(versionId);
+    const sketch = await getSketch(sketchId);
+    if (!sketch) {
+      throw new Error(`Sketch ${sketchId} not found`);
+    }
+
+    sketch.selectedVersion = versionId;
+    await saveSketch(sketch);
   } catch (error) {
-    console.error("Failed to delete version from IndexedDB:", error);
+    console.error("Failed to set selected version:", error);
     throw error;
   }
 }
@@ -137,19 +172,14 @@ export async function deleteVersion(versionId) {
  */
 export async function getMetadata(key) {
   try {
-    const db = await openDB();
-    const transaction = db.transaction([STORE_METADATA], "readonly");
-    const store = transaction.objectStore(STORE_METADATA);
-    const request = store.get(key);
-
-    return new Promise((resolve, reject) => {
-      request.onsuccess = () => {
-        resolve(request.result ? request.result.value : null);
-      };
-      request.onerror = () => reject(request.error);
-    });
+    const saved = localStorage.getItem(STORAGE_KEY_METADATA);
+    if (!saved) {
+      return null;
+    }
+    const metadata = JSON.parse(saved);
+    return metadata[key] || null;
   } catch (error) {
-    console.error("Failed to get metadata from IndexedDB:", error);
+    console.error("Failed to get metadata from localStorage:", error);
     return null;
   }
 }
@@ -159,12 +189,12 @@ export async function getMetadata(key) {
  */
 export async function setMetadata(key, value) {
   try {
-    const db = await openDB();
-    const transaction = db.transaction([STORE_METADATA], "readwrite");
-    const store = transaction.objectStore(STORE_METADATA);
-    await store.put({key, value});
+    const saved = localStorage.getItem(STORAGE_KEY_METADATA);
+    const metadata = saved ? JSON.parse(saved) : {};
+    metadata[key] = value;
+    localStorage.setItem(STORAGE_KEY_METADATA, JSON.stringify(metadata));
   } catch (error) {
-    console.error("Failed to set metadata in IndexedDB:", error);
+    console.error("Failed to set metadata in localStorage:", error);
     throw error;
   }
 }
