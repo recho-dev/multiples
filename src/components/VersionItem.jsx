@@ -1,0 +1,35 @@
+import {Sketch} from "./Sketch.jsx";
+import {clsx} from "../clsx.js";
+
+export function VersionItem({version, isCurrent, width, onLoad, onDelete}) {
+  return (
+    <div
+      className={clsx(
+        "rounded cursor-pointer transition-colors border overflow-hidden group relative",
+        isCurrent
+          ? "bg-blue-50 border-blue-300"
+          : "border-transparent hover:border-gray-300 hover:bg-gray-50"
+      )}
+      title={version.code.substring(0, 50) + "..."}
+    >
+      <div onClick={() => onLoad(version)} className="w-full relative">
+        <Sketch code={version.code} width={width} />
+        {version.name && (
+          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs px-2 py-1">
+            {version.name}
+          </div>
+        )}
+      </div>
+      <button
+        onClick={(e) => onDelete(version.id, e)}
+        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1.5 bg-white hover:bg-red-100 rounded shadow-sm transition-opacity"
+        title="Delete version"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+

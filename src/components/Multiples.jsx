@@ -108,3 +108,4 @@ export function Multiples({code, params, onSelect}) {
     </div>
   );
 }
+
