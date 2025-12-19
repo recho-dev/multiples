@@ -189,7 +189,7 @@ function App() {
     };
   }, []);
 
-  const onSave = useCallback((code) => {
+  const onSave = useCallback(() => {
     // Save doesn't automatically run the code - only play button or slider does
   }, []);
 
@@ -197,7 +197,7 @@ function App() {
     setCode(code);
   }, []);
 
-  const onParamsChange = useCallback(({params, code, type}) => {
+  const onParamsChange = useCallback(({params, type}) => {
     setParams(params);
     if (type === "params-update") setShowMultiples(params.length > 0);
   }, []);

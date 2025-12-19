@@ -1,5 +1,3 @@
-import {useCallback} from "react";
-
 export function Header({isFullscreen, onNewSketch, onOpenSketch, onDownloadAll, hasVersions, onFullscreen}) {
   return (
     <header className="h-[50px] flex flex-col justify-center px-4 py-2 border-b border-gray-200 bg-black relative">
