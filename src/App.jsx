@@ -529,6 +529,8 @@ function App() {
         isFullscreen={isFullscreen}
         onNewSketch={handleNewSketch}
         onOpenSketch={handleOpenSketch}
+        onDownloadAll={handleDownloadAll}
+        hasVersions={savedVersions.length > 0}
         onFullscreen={handleFullscreen}
       />
       <main className="h-[calc(100vh-50px)]">
@@ -548,7 +550,6 @@ function App() {
             sidebarWidth={sidebarWidth}
             onLoadVersion={handleLoadVersion}
             onDeleteVersion={handleDeleteVersion}
-            onDownloadAll={handleDownloadAll}
           />
           <EditorPanel
             editorRef={editorRef}
