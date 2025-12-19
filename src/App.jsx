@@ -286,6 +286,12 @@ function App() {
     }
   }, [currentSketchId, currentSketchName, currentVersionId, savedVersions]);
 
+  const handleSaveAndRun = useCallback(async () => {
+    // First save, then run
+    await handleSave();
+    handleRun();
+  }, [handleSave, handleRun]);
+
   const handleLoadVersion = useCallback(
     async (version) => {
       if (editorInstanceRef.current && currentSketchId) {
@@ -376,6 +382,21 @@ function App() {
       document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
     };
   }, []);
+
+  // Listen for Cmd+S / Ctrl+S keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        handleSaveAndRun();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleSaveAndRun]);
 
   const handleFullscreen = useCallback(async () => {
     try {
