@@ -6,6 +6,7 @@ import {Multiples} from "./Multiples.jsx";
 import {createEditor} from "./editor/index.js";
 import {clsx} from "./clsx.js";
 import confetti from "canvas-confetti";
+import {loadVersions, saveVersion, deleteVersion, getMetadata, setMetadata} from "./storage.js";
 
 const initialCode = `p.setup = () => {
   p.createCanvas(200, 200);
@@ -38,7 +39,6 @@ function safe(value) {
 }
 `;
 
-const STORAGE_KEY = "recho-multiples-saved-versions";
 const SPLIT_SIZES_KEY = "recho-multiples-split-sizes";
 
 function uid() {
@@ -60,34 +60,29 @@ function App() {
   const editorRef = useRef(null);
   const editorInstanceRef = useRef(null);
 
-  // Load saved versions and split sizes from localStorage on mount
+  // Load saved versions and split sizes from IndexedDB on mount
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
+    const loadData = async () => {
       try {
-        const versions = JSON.parse(saved);
+        // Load versions from IndexedDB
+        const versions = await loadVersions();
         setSavedVersions(versions);
         // Set the latest version as current by default
         if (versions.length > 0) {
           setCurrentVersionId(versions[0].id);
         }
-      } catch (e) {
-        console.error("Failed to load saved versions:", e);
-      }
-    }
 
-    // Load split sizes
-    const savedSizes = localStorage.getItem(SPLIT_SIZES_KEY);
-    if (savedSizes) {
-      try {
-        const sizes = JSON.parse(savedSizes);
+        // Load split sizes from IndexedDB
+        const sizes = await getMetadata(SPLIT_SIZES_KEY);
         if (Array.isArray(sizes) && sizes.length === 3) {
           setSplitSizes(sizes);
         }
       } catch (e) {
-        console.error("Failed to load split sizes:", e);
+        console.error("Failed to load data:", e);
       }
-    }
+    };
+
+    loadData();
   }, []);
 
   // Measure sidebar width
@@ -160,9 +155,10 @@ function App() {
     setSaveName("");
   }, []);
 
-  const handleSaveSubmit = useCallback(() => {
+  const handleSaveSubmit = useCallback(async () => {
     if (editorInstanceRef.current) {
       const currentCode = editorInstanceRef.current.getCode();
+
       const newVersion = {
         id: uid(),
         parentId: currentVersionId, // Track which version this was derived from
@@ -171,19 +167,28 @@ function App() {
         time: new Date().toLocaleString(),
         name: saveName.trim() || null,
       };
-      const updatedVersions = [newVersion, ...savedVersions];
-      setSavedVersions(updatedVersions);
-      setCurrentVersionId(newVersion.id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedVersions));
-      setShowSaveModal(false);
-      setSaveName("");
 
-      // Trigger confetti animation
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: {y: 0.6},
-      });
+      try {
+        // Save to IndexedDB
+        await saveVersion(newVersion);
+
+        // Reload all versions to get the updated list
+        const updatedVersions = await loadVersions();
+        setSavedVersions(updatedVersions);
+        setCurrentVersionId(newVersion.id);
+        setShowSaveModal(false);
+        setSaveName("");
+
+        // Trigger confetti animation
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: {y: 0.6},
+        });
+      } catch (error) {
+        console.error("Failed to save version:", error);
+        alert("Failed to save version. Please try again.");
+      }
     }
   }, [savedVersions, currentVersionId, saveName]);
 
@@ -201,33 +206,43 @@ function App() {
   }, []);
 
   const handleDeleteVersion = useCallback(
-    (versionId, e) => {
+    async (versionId, e) => {
       e.stopPropagation(); // Prevent triggering the load version action
       if (window.confirm("Are you sure you want to delete this version?")) {
-        const updatedVersions = savedVersions.filter((v) => v.id !== versionId);
-        setSavedVersions(updatedVersions);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedVersions));
-        // If we deleted the current version, set currentVersionId to the first available version or null
-        if (currentVersionId === versionId) {
-          if (updatedVersions.length > 0) {
-            setCurrentVersionId(updatedVersions[0].id);
-            // Optionally load the first version's code
-            if (editorInstanceRef.current) {
-              editorInstanceRef.current.setCode(updatedVersions[0].code);
-              setCode(updatedVersions[0].code);
+        try {
+          await deleteVersion(versionId);
+          // Reload all versions
+          const updatedVersions = await loadVersions();
+          setSavedVersions(updatedVersions);
+          // If we deleted the current version, set currentVersionId to the first available version or null
+          if (currentVersionId === versionId) {
+            if (updatedVersions.length > 0) {
+              setCurrentVersionId(updatedVersions[0].id);
+              // Optionally load the first version's code
+              if (editorInstanceRef.current) {
+                editorInstanceRef.current.setCode(updatedVersions[0].code);
+                setCode(updatedVersions[0].code);
+              }
+            } else {
+              setCurrentVersionId(null);
             }
-          } else {
-            setCurrentVersionId(null);
           }
+        } catch (error) {
+          console.error("Failed to delete version:", error);
+          alert("Failed to delete version. Please try again.");
         }
       }
     },
     [savedVersions, currentVersionId]
   );
 
-  const handleSplitChange = useCallback((sizes) => {
+  const handleSplitChange = useCallback(async (sizes) => {
     setSplitSizes(sizes);
-    localStorage.setItem(SPLIT_SIZES_KEY, JSON.stringify(sizes));
+    try {
+      await setMetadata(SPLIT_SIZES_KEY, sizes);
+    } catch (error) {
+      console.error("Failed to save split sizes:", error);
+    }
   }, []);
 
   // Listen for fullscreen changes
