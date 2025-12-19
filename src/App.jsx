@@ -261,6 +261,24 @@ function App() {
     }
   }, []);
 
+  const handleDownloadAll = useCallback(() => {
+    if (savedVersions.length === 0) {
+      alert("No versions to download");
+      return;
+    }
+
+    const dataStr = JSON.stringify(savedVersions, null, 2);
+    const dataBlob = new Blob([dataStr], {type: "application/json"});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `recho-multiples-versions-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [savedVersions]);
+
   return (
     <div className="min-h-screen">
       <header className="h-[50px] flex flex-col justify-center px-4 py-2 border-b border-gray-200 bg-black relative">
@@ -291,8 +309,22 @@ function App() {
           snapOffset={0}
         >
           <div className="h-full flex flex-col overflow-hidden">
-            <div className="px-4 py-2 border-b border-gray-200 flex-shrink-0">
+            <div className="px-4 py-2 border-b border-gray-200 flex-shrink-0 flex items-center justify-between">
               <span>History</span>
+              {savedVersions.length > 0 && (
+                <button
+                  onClick={handleDownloadAll}
+                  className="p-1.5 text-gray-600 hover:text-black hover:bg-gray-100 rounded transition-colors"
+                  title="Download all versions"
+                  aria-label="Download all versions"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </button>
+              )}
             </div>
             <div ref={sidebarRef} className="flex-1 overflow-y-auto px-4 py-2">
               {savedVersions.length === 0 ? (
