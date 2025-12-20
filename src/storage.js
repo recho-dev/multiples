@@ -104,6 +104,16 @@ export async function saveVersion(sketchId, version) {
       sketch.versions.push(versionToStore);
       // Sort versions by timestamp descending (newest first)
       sketch.versions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      // Update nextVersionId if this is a new version with a numeric ID
+      const versionNum = parseInt(versionToStore.id, 10);
+      if (!isNaN(versionNum)) {
+        const currentNextId = sketch.nextVersionId ?? 0;
+        // Only update if the new version ID is >= current counter
+        if (versionNum >= currentNextId) {
+          sketch.nextVersionId = versionNum + 1;
+        }
+      }
     }
 
     // Update selectedVersion to the newly saved version

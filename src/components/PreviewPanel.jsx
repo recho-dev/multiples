@@ -4,8 +4,8 @@ import {Multiples} from "./Multiples.jsx";
 
 export function PreviewPanel({showMultiples, code, params, onToggleMultiples, onSelect}) {
   return (
-    <div className="h-full overflow-auto ml-4 mt-2">
-      <div className="flex gap-2 mb-2">
+    <div className="h-full flex flex-col ml-4 mt-2">
+      <div className="flex gap-2 mb-2 flex-shrink-0">
         <span
           className={clsx("cursor-pointer", !showMultiples && "border-b-1")}
           onClick={() => onToggleMultiples(false)}
@@ -21,7 +21,7 @@ export function PreviewPanel({showMultiples, code, params, onToggleMultiples, on
           </span>
         )}
       </div>
-      <div>
+      <div className="flex-1 overflow-auto">
         {showMultiples ? <Multiples code={code} params={params} onSelect={onSelect} /> : <Sketch code={code} />}
       </div>
     </div>

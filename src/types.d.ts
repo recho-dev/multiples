@@ -35,6 +35,8 @@ export interface Sketch {
   versions: Version[];
   /** ID of the currently selected version (null if no version is selected) */
   selectedVersion: string | null;
+  /** Next version ID counter (always increments, never reused) */
+  nextVersionId?: number;
 }
 
 /**

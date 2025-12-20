@@ -1,0 +1,471 @@
+import {useState, useCallback, useRef, useEffect} from "react";
+import Split from "react-split";
+import {createEditor} from "../editor/index.js";
+import friendlyWords from "friendly-words";
+import {
+  saveVersion,
+  deleteVersion,
+  getSketch,
+  setSelectedVersion,
+  getMetadata,
+  setMetadata,
+  saveSketch,
+} from "../storage.js";
+import {HistoryPanel} from "./HistoryPanel.jsx";
+import {EditorPanel} from "./EditorPanel.jsx";
+import {PreviewPanel} from "./PreviewPanel.jsx";
+
+const initialCode = `p.setup = () => {
+  p.createCanvas(400, 400);
+};
+
+p.draw = () => {
+  p.background(220);
+};
+`;
+
+const SPLIT_SIZES_KEY = "recho-multiples-split-sizes";
+
+function uid() {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+function generateFriendlyName() {
+  const predicate = friendlyWords.predicates[Math.floor(Math.random() * friendlyWords.predicates.length)];
+  const object = friendlyWords.objects[Math.floor(Math.random() * friendlyWords.objects.length)];
+  const num = Math.floor(Math.random() * 100);
+  return `${predicate}-${object}-${num}`;
+}
+
+export function Workspace({
+  sketchId,
+  sketchName,
+  versions: initialVersions = [],
+  currentVersionId: initialVersionId = null,
+  initialCode: providedInitialCode = initialCode,
+  isExample = false,
+  onSketchIdChange,
+  onSketchNameChange,
+  onVersionsChange,
+  navigate,
+}) {
+  const handleSaveName = useCallback(
+    async (newName) => {
+      if (!sketchId || isExample) {
+        // For examples or new sketches, just update the name in parent
+        onSketchNameChange?.(newName);
+        return;
+      }
+
+      try {
+        const sketch = await getSketch(sketchId);
+        if (sketch) {
+          sketch.name = newName;
+          await saveSketch(sketch);
+          onSketchNameChange?.(newName);
+        } else {
+          onSketchNameChange?.(newName);
+        }
+      } catch (error) {
+        console.error("Failed to save sketch name:", error);
+      }
+    },
+    [sketchId, isExample, onSketchNameChange]
+  );
+  const [code, setCode] = useState(providedInitialCode);
+  const [hasNewCodeToRun, setHasNewCodeToRun] = useState(false);
+  const [hasNewCodeToSave, setHasNewCodeToSave] = useState(false);
+  const [params, setParams] = useState([]);
+  const [showMultiples, setShowMultiples] = useState(false);
+  const [savedVersions, setSavedVersions] = useState(initialVersions);
+  const [currentVersionId, setCurrentVersionId] = useState(initialVersionId);
+  const [sidebarWidth, setSidebarWidth] = useState(176);
+  const [splitSizes, setSplitSizes] = useState([15, 35, 50]);
+  const sidebarRef = useRef(null);
+  const editorRef = useRef(null);
+  const editorInstanceRef = useRef(null);
+
+  // Update local state when props change
+  useEffect(() => {
+    setSavedVersions(initialVersions);
+  }, [initialVersions]);
+
+  useEffect(() => {
+    setCurrentVersionId(initialVersionId);
+  }, [initialVersionId]);
+
+  // Update code when initialCode prop changes (e.g., when loading from URL)
+  useEffect(() => {
+    setCode(providedInitialCode);
+    if (editorInstanceRef.current) {
+      editorInstanceRef.current.setCode(providedInitialCode);
+    }
+  }, [providedInitialCode]);
+
+  // Load split sizes on mount
+  useEffect(() => {
+    const loadSplitSizes = async () => {
+      try {
+        const sizes = await getMetadata(SPLIT_SIZES_KEY);
+        if (Array.isArray(sizes) && sizes.length === 3) {
+          setSplitSizes(sizes);
+        }
+      } catch (e) {
+        console.error("Failed to load split sizes:", e);
+      }
+    };
+    loadSplitSizes();
+  }, []);
+
+  // Measure sidebar width
+  useEffect(() => {
+    if (!sidebarRef.current) return;
+
+    const updateWidth = () => {
+      if (sidebarRef.current) {
+        const width = sidebarRef.current.clientWidth - 32;
+        setSidebarWidth(width);
+      }
+    };
+
+    updateWidth();
+
+    const resizeObserver = new ResizeObserver(updateWidth);
+    resizeObserver.observe(sidebarRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  const onSave = useCallback(() => {
+    // Save doesn't automatically run the code - only play button or slider does
+  }, []);
+
+  const onSliderChange = useCallback((code) => {
+    setCode(code);
+  }, []);
+
+  const onParamsChange = useCallback(({params, type}) => {
+    setParams(params);
+    if (type === "params-update") setShowMultiples(params.length > 0);
+  }, []);
+
+  const onSelect = useCallback(
+    ({code, values}) => {
+      if (!editorInstanceRef.current || params.length === 0) return;
+      editorInstanceRef.current.update(params, values);
+      setCode(code);
+      setShowMultiples(false);
+    },
+    [params]
+  );
+
+  // Initialize editor
+  useEffect(() => {
+    if (!editorRef.current) return;
+    editorInstanceRef.current = createEditor(editorRef.current, {
+      initialCode: code,
+      onSave,
+      onSliderChange,
+      onParamsChange,
+    });
+    return () => {
+      if (editorInstanceRef.current) {
+        editorInstanceRef.current.destroy();
+        editorInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update editor code when code state changes
+  useEffect(() => {
+    if (editorInstanceRef.current && code !== editorInstanceRef.current.getCode()) {
+      editorInstanceRef.current.setCode(code);
+    }
+  }, [code]);
+
+  // Track editor code changes and update button states
+  useEffect(() => {
+    if (!editorInstanceRef.current) return;
+
+    const checkEditorChanges = () => {
+      const currentEditorCode = editorInstanceRef.current.getCode();
+
+      // Check if there's new code to run
+      const needsRun = currentEditorCode !== code;
+      setHasNewCodeToRun(needsRun);
+
+      // Check if there's new code to save
+      let needsSave = false;
+      if (currentVersionId) {
+        const currentVersion = savedVersions.find((v) => v.id === currentVersionId);
+        if (currentVersion) {
+          needsSave = currentVersion.code !== currentEditorCode;
+        } else {
+          needsSave = currentEditorCode !== initialCode;
+        }
+      } else {
+        needsSave = currentEditorCode !== initialCode;
+      }
+      setHasNewCodeToSave(needsSave);
+    };
+
+    checkEditorChanges();
+    const interval = setInterval(checkEditorChanges, 500);
+
+    return () => clearInterval(interval);
+  }, [code, currentVersionId, savedVersions]);
+
+  const handleRun = useCallback(() => {
+    if (editorInstanceRef.current) {
+      const currentCode = editorInstanceRef.current.getCode();
+      setCode(currentCode);
+      setHasNewCodeToRun(false);
+    }
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!editorInstanceRef.current) return;
+    if (isExample) return; // Don't save examples directly
+
+    const currentCode = editorInstanceRef.current.getCode();
+    let currentSketchId = sketchId;
+
+    // If no sketch ID, create a new sketch first
+    if (!currentSketchId) {
+      currentSketchId = uid();
+      const newSketchName = sketchName || generateFriendlyName();
+      await saveSketch({
+        id: currentSketchId,
+        name: newSketchName,
+        timestamp: new Date().toISOString(),
+        versions: [],
+        selectedVersion: null,
+        nextVersionId: 0,
+      });
+      onSketchIdChange?.(currentSketchId);
+      onSketchNameChange?.(newSketchName);
+      navigate(`/multiples/sketches/${currentSketchId}`);
+    }
+
+    // Check if code has changed from the current version
+    if (currentVersionId) {
+      const currentVersion = savedVersions.find((v) => v.id === currentVersionId);
+      if (currentVersion && currentVersion.code === currentCode) {
+        return;
+      }
+    }
+
+    try {
+      let currentSketch = await getSketch(currentSketchId);
+      if (!currentSketch) {
+        currentSketch = await saveSketch({
+          id: currentSketchId,
+          name: sketchName || generateFriendlyName(),
+          timestamp: new Date().toISOString(),
+          versions: [],
+          selectedVersion: null,
+          nextVersionId: 0,
+        });
+      }
+
+      // Initialize nextVersionId if it doesn't exist
+      if (currentSketch.nextVersionId === undefined) {
+        const existingVersions = currentSketch.versions || [];
+        let maxVersionNum = -1;
+        for (const version of existingVersions) {
+          const versionNum = parseInt(version.id, 10);
+          if (!isNaN(versionNum) && versionNum > maxVersionNum) {
+            maxVersionNum = versionNum;
+          }
+        }
+        currentSketch.nextVersionId = maxVersionNum + 1;
+        await saveSketch(currentSketch);
+      }
+
+      const nextVersionId = String(currentSketch.nextVersionId);
+      currentSketch.nextVersionId = currentSketch.nextVersionId + 1;
+
+      const newVersion = {
+        id: nextVersionId,
+        parentId: currentVersionId,
+        code: currentCode,
+        timestamp: new Date().toISOString(),
+        time: new Date().toLocaleString(),
+        name: null,
+      };
+
+      await saveSketch(currentSketch);
+      await saveVersion(currentSketchId, newVersion);
+
+      const sketch = await getSketch(currentSketchId);
+      if (sketch) {
+        const updatedVersions = sketch.versions || [];
+        setSavedVersions(updatedVersions);
+        onVersionsChange?.(updatedVersions);
+        setCurrentVersionId(newVersion.id);
+        setHasNewCodeToSave(false);
+      }
+    } catch (error) {
+      console.error("Failed to save version:", error);
+      alert("Failed to save version. Please try again.");
+    }
+  }, [
+    sketchId,
+    sketchName,
+    currentVersionId,
+    savedVersions,
+    isExample,
+    navigate,
+    onSketchIdChange,
+    onSketchNameChange,
+    onVersionsChange,
+  ]);
+
+  const handleLoadVersion = useCallback(
+    async (version) => {
+      if (editorInstanceRef.current && sketchId) {
+        editorInstanceRef.current.setCode(version.code);
+        setCode(version.code);
+        setHasNewCodeToRun(false);
+        setHasNewCodeToSave(false);
+        setCurrentVersionId(version.id);
+        if (!isExample) {
+          await setSelectedVersion(sketchId, version.id);
+        }
+      }
+    },
+    [sketchId, isExample]
+  );
+
+  const handleDeleteVersion = useCallback(
+    async (versionId, e) => {
+      e.stopPropagation();
+      if (isExample) return; // Don't delete versions from examples
+      if (window.confirm("Are you sure you want to delete this version?")) {
+        try {
+          await deleteVersion(sketchId, versionId);
+          const sketch = await getSketch(sketchId);
+          if (sketch) {
+            const updatedVersions = sketch.versions || [];
+            setSavedVersions(updatedVersions);
+            onVersionsChange?.(updatedVersions);
+            if (currentVersionId === versionId) {
+              if (sketch.selectedVersion) {
+                const selected = updatedVersions.find((v) => v.id === sketch.selectedVersion);
+                if (selected) {
+                  setCurrentVersionId(selected.id);
+                  if (editorInstanceRef.current) {
+                    editorInstanceRef.current.setCode(selected.code);
+                    setCode(selected.code);
+                  }
+                } else if (updatedVersions.length > 0) {
+                  setCurrentVersionId(updatedVersions[0].id);
+                  if (editorInstanceRef.current) {
+                    editorInstanceRef.current.setCode(updatedVersions[0].code);
+                    setCode(updatedVersions[0].code);
+                  }
+                } else {
+                  setCurrentVersionId(null);
+                }
+              } else if (updatedVersions.length > 0) {
+                setCurrentVersionId(updatedVersions[0].id);
+                if (editorInstanceRef.current) {
+                  editorInstanceRef.current.setCode(updatedVersions[0].code);
+                  setCode(updatedVersions[0].code);
+                }
+              } else {
+                setCurrentVersionId(null);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Failed to delete version:", error);
+          alert("Failed to delete version. Please try again.");
+        }
+      }
+    },
+    [sketchId, currentVersionId, isExample, onVersionsChange]
+  );
+
+  const handleSplitChange = useCallback(async (sizes) => {
+    setSplitSizes(sizes);
+    try {
+      await setMetadata(SPLIT_SIZES_KEY, sizes);
+    } catch (error) {
+      console.error("Failed to save split sizes:", error);
+    }
+  }, []);
+
+  // Listen for Cmd+S / Ctrl+S keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+        handleRun();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleSave, handleRun]);
+
+  // Warn user before leaving page if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasNewCodeToSave) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasNewCodeToSave]);
+
+  return (
+    <main className="h-[calc(100vh-50px)]">
+      <Split
+        className="split"
+        sizes={splitSizes}
+        minSize={[150, 300, 400]}
+        gutterSize={8}
+        onDragEnd={handleSplitChange}
+        direction="horizontal"
+        snapOffset={0}
+      >
+        <HistoryPanel
+          ref={sidebarRef}
+          versions={savedVersions}
+          currentVersionId={currentVersionId}
+          sidebarWidth={sidebarWidth}
+          onLoadVersion={handleLoadVersion}
+          onDeleteVersion={handleDeleteVersion}
+        />
+        <EditorPanel
+          editorRef={editorRef}
+          onRun={handleRun}
+          onSave={handleSave}
+          sketchName={sketchName}
+          onSaveName={handleSaveName}
+          hasNewCodeToRun={hasNewCodeToRun}
+          hasNewCodeToSave={hasNewCodeToSave}
+        />
+        <PreviewPanel
+          showMultiples={showMultiples}
+          code={code}
+          params={params}
+          onToggleMultiples={setShowMultiples}
+          onSelect={onSelect}
+        />
+      </Split>
+    </main>
+  );
+}

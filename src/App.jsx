@@ -1,24 +1,9 @@
 import "./App.css";
 import {useState, useCallback, useRef, useEffect} from "react";
 import {useRoute} from "./hooks/useRoute.js";
-import Split from "react-split";
-import {createEditor} from "./editor/index.js";
-import friendlyWords from "friendly-words";
-import {
-  saveVersion,
-  deleteVersion,
-  getMetadata,
-  setMetadata,
-  loadSketches,
-  saveSketch,
-  deleteSketch,
-  getSketch,
-  setSelectedVersion,
-} from "./storage.js";
+import {loadSketches, deleteSketch, getSketch} from "./storage.js";
 import {Header} from "./components/Header.jsx";
-import {HistoryPanel} from "./components/HistoryPanel.jsx";
-import {EditorPanel} from "./components/EditorPanel.jsx";
-import {PreviewPanel} from "./components/PreviewPanel.jsx";
+import {Workspace} from "./components/Workspace.jsx";
 import {OpenSketchModal} from "./components/OpenSketchModal.jsx";
 import {ExamplesModal} from "./components/ExamplesModal.jsx";
 
@@ -31,401 +16,102 @@ p.draw = () => {
 };
 `;
 
-const SPLIT_SIZES_KEY = "recho-multiples-split-sizes";
-
-function uid() {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-}
-
-function generateFriendlyName() {
-  const predicate = friendlyWords.predicates[Math.floor(Math.random() * friendlyWords.predicates.length)];
-  const object = friendlyWords.objects[Math.floor(Math.random() * friendlyWords.objects.length)];
-  const num = Math.floor(Math.random() * 100);
-  return `${predicate}-${object}-${num}`;
-}
-
 function SketchEditor() {
-  const {id, navigate} = useRoute();
-  const [code, setCode] = useState(initialCode);
-  const [runnableCode, setRunnableCode] = useState(null); // Code that actually runs in preview
-  const [editorCode, setEditorCode] = useState(initialCode); // Current code in editor
-  const [hasNewCodeToRun, setHasNewCodeToRun] = useState(false); // Whether editor code differs from runnable code
-  const [hasNewCodeToSave, setHasNewCodeToSave] = useState(false); // Whether editor code differs from saved version
-  const [params, setParams] = useState([]);
-  const [showMultiples, setShowMultiples] = useState(false);
-  const [savedVersions, setSavedVersions] = useState([]);
-  const [currentVersionId, setCurrentVersionId] = useState(null);
-  const [sidebarWidth, setSidebarWidth] = useState(176);
-  const [splitSizes, setSplitSizes] = useState([15, 35, 50]); // [history, editor, preview]
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const {id, type, navigate} = useRoute();
   const [currentSketchId, setCurrentSketchId] = useState(id || null);
   const [currentSketchName, setCurrentSketchName] = useState(null);
+  const [savedVersions, setSavedVersions] = useState([]);
+  const [currentVersionId, setCurrentVersionId] = useState(null);
+  const [initialCodeToLoad, setInitialCodeToLoad] = useState(initialCode);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [availableSketches, setAvailableSketches] = useState([]);
   const [showExamplesModal, setShowExamplesModal] = useState(false);
   const [availableExamples, setAvailableExamples] = useState([]);
-  const sidebarRef = useRef(null);
-  const editorRef = useRef(null);
-  const editorInstanceRef = useRef(null);
-
-  // Load split sizes on mount
-  useEffect(() => {
-    const loadSplitSizes = async () => {
-      try {
-        const sizes = await getMetadata(SPLIT_SIZES_KEY);
-        if (Array.isArray(sizes) && sizes.length === 3) {
-          setSplitSizes(sizes);
-        }
-      } catch (e) {
-        console.error("Failed to load split sizes:", e);
-      }
-    };
-    loadSplitSizes();
-  }, []);
+  const lastLoadedSketchIdRef = useRef(null);
 
   // Load sketch from URL when id changes
   useEffect(() => {
+    if (lastLoadedSketchIdRef.current === id) {
+      return;
+    }
+
     const loadSketchFromUrl = async () => {
       if (!id) {
         // No ID in URL - new sketch
+        lastLoadedSketchIdRef.current = null;
         setCurrentSketchId(null);
         setCurrentSketchName(null);
-        setCode(initialCode);
-        setEditorCode(initialCode);
-        setRunnableCode(null); // Don't run by default
-        setHasNewCodeToRun(false);
-        setHasNewCodeToSave(false);
-        if (editorInstanceRef.current) {
-          editorInstanceRef.current.setCode(initialCode);
-        }
+        setInitialCodeToLoad(initialCode);
         setCurrentVersionId(null);
         setSavedVersions([]);
         return;
       }
 
       try {
-        const sketch = await getSketch(id);
+        let sketch = null;
+
+        // If it's an example route, load from examples
+        if (type === "example") {
+          try {
+            const exampleModules = import.meta.glob("./examples/*.json", {eager: true});
+            const examples = Object.values(exampleModules).map((module) => {
+              return module.default || module;
+            });
+            sketch = examples.find((ex) => ex.id === id);
+          } catch (e) {
+            console.error("Failed to load examples:", e);
+          }
+        } else {
+          // Otherwise, try to load from localStorage
+          sketch = await getSketch(id);
+        }
+
         if (sketch) {
+          lastLoadedSketchIdRef.current = id;
           setCurrentSketchId(sketch.id);
           setCurrentSketchName(sketch.name);
           const versions = sketch.versions || [];
           setSavedVersions(versions);
 
           // Load selected version or first version
+          let codeToLoad = initialCode;
+          let versionId = null;
+
           if (sketch.selectedVersion) {
             const selected = versions.find((v) => v.id === sketch.selectedVersion);
             if (selected) {
-              setCurrentVersionId(selected.id);
-              setCode(selected.code);
-              setEditorCode(selected.code);
-              setRunnableCode(null); // Don't run by default
-              setHasNewCodeToRun(false);
-              setHasNewCodeToSave(false);
-              if (editorInstanceRef.current) {
-                editorInstanceRef.current.setCode(selected.code);
-              }
+              versionId = selected.id;
+              codeToLoad = selected.code;
             } else if (versions.length > 0) {
-              setCurrentVersionId(versions[0].id);
-              setCode(versions[0].code);
-              setEditorCode(versions[0].code);
-              setRunnableCode(null); // Don't run by default
-              setHasNewCodeToRun(false);
-              setHasNewCodeToSave(false);
-              if (editorInstanceRef.current) {
-                editorInstanceRef.current.setCode(versions[0].code);
-              }
+              versionId = versions[0].id;
+              codeToLoad = versions[0].code;
             }
           } else if (versions.length > 0) {
-            setCurrentVersionId(versions[0].id);
-            setCode(versions[0].code);
-            setEditorCode(versions[0].code);
-            setRunnableCode(null); // Don't run by default
-            setHasNewCodeToRun(false);
-            setHasNewCodeToSave(false);
-            if (editorInstanceRef.current) {
-              editorInstanceRef.current.setCode(versions[0].code);
-            }
-          } else {
-            setCurrentVersionId(null);
-            setCode(initialCode);
-            setEditorCode(initialCode);
-            setRunnableCode(null); // Don't run by default
-            setHasNewCodeToRun(false);
-            setHasNewCodeToSave(false);
-            if (editorInstanceRef.current) {
-              editorInstanceRef.current.setCode(initialCode);
-            }
+            versionId = versions[0].id;
+            codeToLoad = versions[0].code;
           }
+
+          setCurrentVersionId(versionId);
+          setInitialCodeToLoad(codeToLoad);
         } else {
-          // Sketch not found, redirect to home
+          // Sketch/example not found
+          if (lastLoadedSketchIdRef.current === id) {
+            return;
+          }
           navigate("/multiples/", {replace: true});
         }
       } catch (e) {
         console.error("Failed to load sketch:", e);
+        if (lastLoadedSketchIdRef.current === id) {
+          return;
+        }
         navigate("/multiples/", {replace: true});
       }
     };
 
     loadSketchFromUrl();
-  }, [id, navigate]);
-
-  // Measure sidebar width
-  useEffect(() => {
-    if (!sidebarRef.current) return;
-
-    const updateWidth = () => {
-      if (sidebarRef.current) {
-        const width = sidebarRef.current.clientWidth - 32; // Subtract padding (p-4 = 16px * 2)
-        setSidebarWidth(width);
-      }
-    };
-
-    updateWidth();
-
-    const resizeObserver = new ResizeObserver(updateWidth);
-    resizeObserver.observe(sidebarRef.current);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  const onSave = useCallback(() => {
-    // Save doesn't automatically run the code - only play button or slider does
-  }, []);
-
-  const onSliderChange = useCallback((code) => {
-    setCode(code);
-  }, []);
-
-  const onParamsChange = useCallback(({params, type}) => {
-    setParams(params);
-    if (type === "params-update") setShowMultiples(params.length > 0);
-  }, []);
-
-  const onSelect = useCallback(
-    ({code, values}) => {
-      if (!editorInstanceRef.current || params.length === 0) return;
-      editorInstanceRef.current.update(params, values);
-      setCode(code);
-      setEditorCode(code);
-      setShowMultiples(false);
-    },
-    [params]
-  );
-
-  useEffect(() => {
-    if (!editorRef.current) return;
-    editorInstanceRef.current = createEditor(editorRef.current, {
-      initialCode: code,
-      onSave,
-      onSliderChange,
-      onParamsChange,
-    });
-    return () => {
-      editorInstanceRef.current.destroy();
-      editorInstanceRef.current = null;
-    };
-  }, []);
-
-  // Track editor code changes and update button states
-  useEffect(() => {
-    if (!editorInstanceRef.current) return;
-
-    const checkEditorChanges = () => {
-      const currentEditorCode = editorInstanceRef.current.getCode();
-      setEditorCode(currentEditorCode);
-
-      // Check if there's new code to run
-      const needsRun = currentEditorCode !== (runnableCode || "");
-      setHasNewCodeToRun(needsRun);
-
-      // Check if there's new code to save
-      let needsSave = false;
-      if (currentVersionId) {
-        const currentVersion = savedVersions.find((v) => v.id === currentVersionId);
-        if (currentVersion) {
-          needsSave = currentVersion.code !== currentEditorCode;
-        } else {
-          needsSave = currentEditorCode !== initialCode;
-        }
-      } else {
-        // No version saved yet, check if code is different from initial
-        needsSave = currentEditorCode !== initialCode;
-      }
-      setHasNewCodeToSave(needsSave);
-    };
-
-    // Check on mount and set up interval to check for changes
-    checkEditorChanges();
-    const interval = setInterval(checkEditorChanges, 500); // Check every 500ms
-
-    return () => clearInterval(interval);
-  }, [runnableCode, currentVersionId, savedVersions]);
-
-  const handleRun = useCallback(() => {
-    if (editorInstanceRef.current) {
-      const currentCode = editorInstanceRef.current.getCode();
-      setCode(currentCode);
-      setEditorCode(currentCode);
-      setRunnableCode(currentCode); // Update runnable code only when Run is clicked
-      setHasNewCodeToRun(false); // Reset after running
-    }
-  }, []);
-
-  const handleSave = useCallback(async () => {
-    if (!editorInstanceRef.current) return;
-
-    const currentCode = editorInstanceRef.current.getCode();
-    let sketchId = currentSketchId;
-
-    // If no sketch ID, create a new sketch first
-    if (!sketchId) {
-      sketchId = uid();
-      const newSketchName = currentSketchName || generateFriendlyName();
-      await saveSketch({
-        id: sketchId,
-        name: newSketchName,
-        timestamp: new Date().toISOString(),
-        versions: [],
-        selectedVersion: null,
-      });
-      setCurrentSketchId(sketchId);
-      setCurrentSketchName(newSketchName);
-      // Navigate to the sketch URL
-      navigate(`/multiples/sketches/${sketchId}`);
-    }
-
-    // Check if code has changed from the current version
-    if (currentVersionId) {
-      const currentVersion = savedVersions.find((v) => v.id === currentVersionId);
-      if (currentVersion && currentVersion.code === currentCode) {
-        // Code hasn't changed, no need to save
-        return;
-      }
-    }
-
-    try {
-      // Check if sketch exists in localStorage, if not, save it first
-      const existingSketch = await getSketch(sketchId);
-      if (!existingSketch) {
-        // Sketch doesn't exist yet, save it first
-        await saveSketch({
-          id: sketchId,
-          name: currentSketchName || generateFriendlyName(),
-          timestamp: new Date().toISOString(),
-          versions: [],
-          selectedVersion: null,
-        });
-      }
-
-      const newVersion = {
-        id: uid(),
-        parentId: currentVersionId, // Track which version this was derived from
-        code: currentCode,
-        timestamp: new Date().toISOString(),
-        time: new Date().toLocaleString(),
-        name: null,
-      };
-
-      // Save version to sketch
-      await saveVersion(sketchId, newVersion);
-
-      // Reload sketch to get updated versions
-      const sketch = await getSketch(sketchId);
-      if (sketch) {
-        const updatedVersions = sketch.versions || [];
-        setSavedVersions(updatedVersions);
-        setCurrentVersionId(newVersion.id);
-        setHasNewCodeToSave(false); // Reset after saving
-      }
-    } catch (error) {
-      console.error("Failed to save version:", error);
-      alert("Failed to save version. Please try again.");
-    }
-  }, [currentSketchId, currentSketchName, currentVersionId, savedVersions, navigate]);
-
-  const handleSaveAndRun = useCallback(async () => {
-    // First save, then run
-    await handleSave();
-    handleRun();
-  }, [handleSave, handleRun]);
-
-  const handleLoadVersion = useCallback(
-    async (version) => {
-      if (editorInstanceRef.current && currentSketchId) {
-        editorInstanceRef.current.setCode(version.code);
-        setCode(version.code);
-        setEditorCode(version.code);
-        setRunnableCode(null); // Don't run by default when loading a version
-        setHasNewCodeToRun(false);
-        setHasNewCodeToSave(false);
-        setCurrentVersionId(version.id);
-        // Update selected version in sketch
-        await setSelectedVersion(currentSketchId, version.id);
-      }
-    },
-    [currentSketchId]
-  );
-
-  const handleDeleteVersion = useCallback(
-    async (versionId, e) => {
-      e.stopPropagation(); // Prevent triggering the load version action
-      if (window.confirm("Are you sure you want to delete this version?")) {
-        try {
-          await deleteVersion(currentSketchId, versionId);
-          // Reload sketch to get updated versions
-          const sketch = await getSketch(currentSketchId);
-          if (sketch) {
-            const updatedVersions = sketch.versions || [];
-            setSavedVersions(updatedVersions);
-            // If we deleted the current version, set currentVersionId to the selected version or first available
-            if (currentVersionId === versionId) {
-              if (sketch.selectedVersion) {
-                const selected = updatedVersions.find((v) => v.id === sketch.selectedVersion);
-                if (selected) {
-                  setCurrentVersionId(selected.id);
-                  if (editorInstanceRef.current) {
-                    editorInstanceRef.current.setCode(selected.code);
-                    setCode(selected.code);
-                  }
-                } else if (updatedVersions.length > 0) {
-                  setCurrentVersionId(updatedVersions[0].id);
-                  if (editorInstanceRef.current) {
-                    editorInstanceRef.current.setCode(updatedVersions[0].code);
-                    setCode(updatedVersions[0].code);
-                  }
-                } else {
-                  setCurrentVersionId(null);
-                }
-              } else if (updatedVersions.length > 0) {
-                setCurrentVersionId(updatedVersions[0].id);
-                if (editorInstanceRef.current) {
-                  editorInstanceRef.current.setCode(updatedVersions[0].code);
-                  setCode(updatedVersions[0].code);
-                }
-              } else {
-                setCurrentVersionId(null);
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Failed to delete version:", error);
-          alert("Failed to delete version. Please try again.");
-        }
-      }
-    },
-    [currentSketchId, currentVersionId]
-  );
-
-  const handleSplitChange = useCallback(async (sizes) => {
-    setSplitSizes(sizes);
-    try {
-      await setMetadata(SPLIT_SIZES_KEY, sizes);
-    } catch (error) {
-      console.error("Failed to save split sizes:", error);
-    }
-  }, []);
+  }, [id, type, navigate]);
 
   // Listen for fullscreen changes
   useEffect(() => {
@@ -446,37 +132,6 @@ function SketchEditor() {
     };
   }, []);
 
-  // Listen for Cmd+S / Ctrl+S keyboard shortcut
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        handleSaveAndRun();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [handleSaveAndRun]);
-
-  // Warn user before leaving page if there are unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (hasNewCodeToSave) {
-        e.preventDefault();
-        e.returnValue = ""; // Chrome requires returnValue to be set
-        return ""; // Some browsers require a return value
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [hasNewCodeToSave]);
-
   const handleFullscreen = useCallback(async () => {
     try {
       if (!document.fullscreenElement) {
@@ -489,39 +144,57 @@ function SketchEditor() {
     }
   }, []);
 
-  const handleDownloadAll = useCallback(() => {
+  const handleDownloadAll = useCallback(async () => {
     if (savedVersions.length === 0) {
       alert("No versions to download");
       return;
     }
 
-    const dataStr = JSON.stringify(savedVersions, null, 2);
-    const dataBlob = new Blob([dataStr], {type: "application/json"});
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `recho-multiples-versions-${new Date().toISOString().split("T")[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [savedVersions]);
+    try {
+      let sketchData = null;
+
+      // If it's a saved sketch, get the full sketch data
+      if (currentSketchId && type !== "example") {
+        sketchData = await getSketch(currentSketchId);
+      }
+
+      // If sketch not found or it's an example, construct the sketch from current state
+      if (!sketchData) {
+        sketchData = {
+          id: currentSketchId || `sketch-${Date.now()}`,
+          name: currentSketchName || "Untitled Sketch",
+          timestamp: new Date().toISOString(),
+          versions: savedVersions,
+          selectedVersion: currentVersionId,
+        };
+      } else {
+        // Ensure we have the latest versions and selected version
+        sketchData.versions = savedVersions;
+        sketchData.selectedVersion = currentVersionId;
+      }
+
+      const dataStr = JSON.stringify(sketchData, null, 2);
+      const dataBlob = new Blob([dataStr], {type: "application/json"});
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      const sketchName = (currentSketchName || "sketch").replace(/[^a-z0-9]/gi, "-").toLowerCase();
+      link.download = `${sketchName}-${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to download sketch:", error);
+      alert("Failed to download sketch. Please try again.");
+    }
+  }, [currentSketchId, currentSketchName, savedVersions, currentVersionId, type]);
 
   const handleNewSketch = useCallback(() => {
-    if (hasNewCodeToSave) {
-      if (!window.confirm("You have unsaved changes. Are you sure you want to create a new sketch?")) {
-        return;
-      }
-    }
     navigate("/multiples/");
-  }, [navigate, hasNewCodeToSave]);
+  }, [navigate]);
 
   const handleOpenSketch = useCallback(async () => {
-    if (hasNewCodeToSave) {
-      if (!window.confirm("You have unsaved changes. Are you sure you want to open another sketch?")) {
-        return;
-      }
-    }
     try {
       const sketches = await loadSketches();
       setAvailableSketches(sketches);
@@ -530,19 +203,12 @@ function SketchEditor() {
       console.error("Failed to load sketches:", error);
       alert("Failed to load sketches. Please try again.");
     }
-  }, [hasNewCodeToSave]);
+  }, []);
 
   const handleExamples = useCallback(async () => {
-    if (hasNewCodeToSave) {
-      if (!window.confirm("You have unsaved changes. Are you sure you want to open examples?")) {
-        return;
-      }
-    }
     try {
-      // Load all example files from the examples directory
       const exampleModules = import.meta.glob("./examples/*.json", {eager: true});
       const examples = Object.values(exampleModules).map((module) => {
-        // Vite imports JSON files as default exports
         return module.default || module;
       });
       setAvailableExamples(examples);
@@ -551,86 +217,59 @@ function SketchEditor() {
       console.error("Failed to load examples:", error);
       alert("Failed to load examples. Please try again.");
     }
-  }, [hasNewCodeToSave]);
+  }, []);
 
   const handleSelectExample = useCallback(
     async (example) => {
-      // Note: We already checked when opening the examples modal, but check again in case user made changes
-      if (hasNewCodeToSave) {
-        if (!window.confirm("You have unsaved changes. Are you sure you want to load this example?")) {
-          return;
-        }
-      }
       try {
-        // Create a new sketch from the example
-        const newSketchId = uid();
-        const exampleSketch = {
-          id: newSketchId,
-          name: example.name,
-          timestamp: new Date().toISOString(),
-          versions: example.versions || [],
-          selectedVersion: example.selectedVersion || (example.versions?.length > 0 ? example.versions[0].id : null),
-        };
+        const exampleId = example.id;
+        lastLoadedSketchIdRef.current = exampleId;
+        setCurrentSketchId(exampleId);
+        setCurrentSketchName(example.name);
+        const versions = example.versions || [];
+        setSavedVersions(versions);
 
-        // Save the example as a new sketch
-        await saveSketch(exampleSketch);
+        const selectedVersionId = example.selectedVersion || (versions.length > 0 ? versions[0].id : null);
+        let codeToLoad = initialCode;
+        if (selectedVersionId && versions.length > 0) {
+          const selectedVersion = versions.find((v) => v.id === selectedVersionId);
+          if (selectedVersion) {
+            codeToLoad = selectedVersion.code;
+          } else if (versions.length > 0) {
+            codeToLoad = versions[0].code;
+          }
+        } else if (versions.length > 0) {
+          codeToLoad = versions[0].code;
+        }
 
-        // Navigate to the sketch URL
+        setCurrentVersionId(selectedVersionId);
+        setInitialCodeToLoad(codeToLoad);
         setShowExamplesModal(false);
-        navigate(`/multiples/sketches/${newSketchId}`);
+        navigate(`/multiples/examples/${exampleId}`);
       } catch (error) {
         console.error("Failed to load example:", error);
         alert("Failed to load example. Please try again.");
       }
     },
-    [navigate, hasNewCodeToSave]
-  );
-
-  const handleSaveName = useCallback(
-    async (newName) => {
-      if (!currentSketchId) return;
-
-      try {
-        const sketch = await getSketch(currentSketchId);
-        if (sketch) {
-          sketch.name = newName;
-          await saveSketch(sketch);
-          setCurrentSketchName(newName);
-        } else {
-          // Sketch doesn't exist yet, just update the state
-          setCurrentSketchName(newName);
-        }
-      } catch (error) {
-        console.error("Failed to save sketch name:", error);
-      }
-    },
-    [currentSketchId]
+    [navigate]
   );
 
   const handleSelectSketch = useCallback(
     async (sketch) => {
-      // Note: We already checked when opening the modal, but check again in case user made changes
-      if (hasNewCodeToSave) {
-        if (!window.confirm("You have unsaved changes. Are you sure you want to switch to this sketch?")) {
-          return;
-        }
-      }
       setShowOpenModal(false);
       navigate(`/multiples/sketches/${sketch.id}`);
     },
-    [navigate, hasNewCodeToSave]
+    [navigate]
   );
 
   const handleDeleteSketch = useCallback(
     async (sketchId, e) => {
-      e.stopPropagation(); // Prevent triggering the select action
+      e.stopPropagation();
       if (window.confirm("Are you sure you want to delete this sketch? All versions will also be deleted.")) {
         try {
           await deleteSketch(sketchId);
-          // Reload sketches list
           const sketches = await loadSketches();
           setAvailableSketches(sketches);
-          // If we deleted the current sketch, navigate to home or first available
           if (currentSketchId === sketchId) {
             if (sketches.length > 0) {
               navigate(`/multiples/sketches/${sketches[0].id}`);
@@ -658,42 +297,18 @@ function SketchEditor() {
         hasVersions={savedVersions.length > 0}
         onFullscreen={handleFullscreen}
       />
-      <main className="h-[calc(100vh-50px)]">
-        <Split
-          className="split"
-          sizes={splitSizes}
-          minSize={[150, 300, 400]}
-          gutterSize={8}
-          onDragEnd={handleSplitChange}
-          direction="horizontal"
-          snapOffset={0}
-        >
-          <HistoryPanel
-            ref={sidebarRef}
-            versions={savedVersions}
-            currentVersionId={currentVersionId}
-            sidebarWidth={sidebarWidth}
-            onLoadVersion={handleLoadVersion}
-            onDeleteVersion={handleDeleteVersion}
-          />
-          <EditorPanel
-            editorRef={editorRef}
-            onRun={handleRun}
-            onSave={handleSave}
-            sketchName={currentSketchName}
-            onSaveName={handleSaveName}
-            hasNewCodeToRun={hasNewCodeToRun}
-            hasNewCodeToSave={hasNewCodeToSave}
-          />
-          <PreviewPanel
-            showMultiples={showMultiples}
-            code={runnableCode}
-            params={params}
-            onToggleMultiples={setShowMultiples}
-            onSelect={onSelect}
-          />
-        </Split>
-      </main>
+      <Workspace
+        sketchId={currentSketchId}
+        sketchName={currentSketchName}
+        versions={savedVersions}
+        currentVersionId={currentVersionId}
+        initialCode={initialCodeToLoad}
+        isExample={type === "example"}
+        onSketchIdChange={setCurrentSketchId}
+        onSketchNameChange={setCurrentSketchName}
+        onVersionsChange={setSavedVersions}
+        navigate={navigate}
+      />
       {showOpenModal && (
         <OpenSketchModal
           sketches={availableSketches}

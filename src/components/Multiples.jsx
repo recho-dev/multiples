@@ -74,7 +74,7 @@ export function Multiples({code, params, onSelect}) {
 
   if (params.length === 0) {
     return (
-      <div className="flex items-center h-full text-gray-500">
+      <div className="text-gray-500">
         <p>No parameter is swept</p>
       </div>
     );
