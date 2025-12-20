@@ -1,5 +1,5 @@
 import {EditorView, ViewPlugin} from "@codemirror/view";
-import {Annotation, Facet} from "@codemirror/state";
+import {Annotation, Facet, StateField, StateEffect} from "@codemirror/state";
 import {createRuler} from "./ruler.js";
 import {html} from "htl";
 
@@ -8,6 +8,24 @@ export const ANNO_SLIDER_UPDATE = Annotation.define();
 
 // Define a facet to provide the params change callback.
 const paramsFacet = Facet.define({combine: (values) => values[0] || (() => {})});
+
+// Define an effect to update the params state
+export const setParamsEffect = StateEffect.define();
+
+// Define a state field to store the current params for highlighting
+export const paramsStateField = StateField.define({
+  create() {
+    return [];
+  },
+  update(params, tr) {
+    for (const effect of tr.effects) {
+      if (effect.is(setParamsEffect)) {
+        return effect.value;
+      }
+    }
+    return params;
+  },
+});
 
 // Find a number on a specific line in the editor based on a given cursor or
 // mouse position.
@@ -57,7 +75,7 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       this.popup = null;
       this.activeNumber = null;
       this.mouseDownPos = null;
-      this.params = [];
+      this.params = view.state.field(paramsStateField, false) || [];
       this.onParamsChange = view.state.facet(paramsFacet);
       this.mousedown = this.mousedown.bind(this);
       this.mouseup = this.mouseup.bind(this);
@@ -102,6 +120,11 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       }
 
       this.params = newParams;
+
+      // Update the state field
+      this.view.dispatch({
+        effects: setParamsEffect.of(this.params),
+      });
 
       this.onParamsChange({
         params: this.params,
@@ -160,6 +183,11 @@ const numberSliderPlugin = ViewPlugin.fromClass(
         }
 
         this.params = [...this.params];
+
+        // Update the state field
+        this.view.dispatch({
+          effects: setParamsEffect.of(this.params),
+        });
 
         this.onParamsChange({
           params: this.params,
@@ -225,5 +253,5 @@ const sliderStyles = EditorView.theme({
 });
 
 export function numberSlider(onParamsChange) {
-  return [numberSliderPlugin, sliderStyles, paramsFacet.of(onParamsChange || (() => {}))];
+  return [paramsStateField, numberSliderPlugin, sliderStyles, paramsFacet.of(onParamsChange || (() => {}))];
 }
