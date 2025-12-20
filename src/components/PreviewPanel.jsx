@@ -4,7 +4,7 @@ import {Multiples} from "./Multiples.jsx";
 
 export function PreviewPanel({showMultiples, code, params, onToggleMultiples, onSelect}) {
   return (
-    <div className="h-full flex flex-col ml-4 mt-2">
+    <div className="h-full flex flex-col ml-4 mt-2 pb-4">
       <div className="flex gap-2 mb-2 flex-shrink-0">
         <span
           className={clsx("cursor-pointer", !showMultiples && "border-b-1")}
@@ -27,4 +27,3 @@ export function PreviewPanel({showMultiples, code, params, onToggleMultiples, on
     </div>
   );
 }
-
