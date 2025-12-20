@@ -73,7 +73,6 @@ export function Workspace({
     [sketchId, isExample, onSketchNameChange]
   );
   const [code, setCode] = useState(providedInitialCode);
-  const [editorCode, setEditorCode] = useState(providedInitialCode);
   const [hasNewCodeToRun, setHasNewCodeToRun] = useState(false);
   const [hasNewCodeToSave, setHasNewCodeToSave] = useState(false);
   const [params, setParams] = useState([]);
@@ -98,7 +97,6 @@ export function Workspace({
   // Update code when initialCode prop changes (e.g., when loading from URL)
   useEffect(() => {
     setCode(providedInitialCode);
-    setEditorCode(providedInitialCode);
     if (editorInstanceRef.current) {
       editorInstanceRef.current.setCode(providedInitialCode);
     }
@@ -158,7 +156,6 @@ export function Workspace({
       if (!editorInstanceRef.current || params.length === 0) return;
       editorInstanceRef.current.update(params, values);
       setCode(code);
-      setEditorCode(code);
       setShowMultiples(false);
     },
     [params]
@@ -185,7 +182,6 @@ export function Workspace({
   useEffect(() => {
     if (editorInstanceRef.current && code !== editorInstanceRef.current.getCode()) {
       editorInstanceRef.current.setCode(code);
-      setEditorCode(code);
     }
   }, [code]);
 
@@ -195,7 +191,6 @@ export function Workspace({
 
     const checkEditorChanges = () => {
       const currentEditorCode = editorInstanceRef.current.getCode();
-      setEditorCode(currentEditorCode);
 
       // Check if there's new code to run
       const needsRun = currentEditorCode !== code;
@@ -226,7 +221,6 @@ export function Workspace({
     if (editorInstanceRef.current) {
       const currentCode = editorInstanceRef.current.getCode();
       setCode(currentCode);
-      setEditorCode(currentCode);
       setHasNewCodeToRun(false);
     }
   }, []);
@@ -334,7 +328,6 @@ export function Workspace({
       if (editorInstanceRef.current && sketchId) {
         editorInstanceRef.current.setCode(version.code);
         setCode(version.code);
-        setEditorCode(version.code);
         setHasNewCodeToRun(false);
         setHasNewCodeToSave(false);
         setCurrentVersionId(version.id);
