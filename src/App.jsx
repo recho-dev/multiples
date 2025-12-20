@@ -461,6 +461,22 @@ function SketchEditor() {
     };
   }, [handleSaveAndRun]);
 
+  // Warn user before leaving page if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasNewCodeToSave) {
+        e.preventDefault();
+        e.returnValue = ""; // Chrome requires returnValue to be set
+        return ""; // Some browsers require a return value
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasNewCodeToSave]);
+
   const handleFullscreen = useCallback(async () => {
     try {
       if (!document.fullscreenElement) {
@@ -492,10 +508,20 @@ function SketchEditor() {
   }, [savedVersions]);
 
   const handleNewSketch = useCallback(() => {
+    if (hasNewCodeToSave) {
+      if (!window.confirm("You have unsaved changes. Are you sure you want to create a new sketch?")) {
+        return;
+      }
+    }
     navigate("/multiples/");
-  }, [navigate]);
+  }, [navigate, hasNewCodeToSave]);
 
   const handleOpenSketch = useCallback(async () => {
+    if (hasNewCodeToSave) {
+      if (!window.confirm("You have unsaved changes. Are you sure you want to open another sketch?")) {
+        return;
+      }
+    }
     try {
       const sketches = await loadSketches();
       setAvailableSketches(sketches);
@@ -504,9 +530,14 @@ function SketchEditor() {
       console.error("Failed to load sketches:", error);
       alert("Failed to load sketches. Please try again.");
     }
-  }, []);
+  }, [hasNewCodeToSave]);
 
   const handleExamples = useCallback(async () => {
+    if (hasNewCodeToSave) {
+      if (!window.confirm("You have unsaved changes. Are you sure you want to open examples?")) {
+        return;
+      }
+    }
     try {
       // Load all example files from the examples directory
       const exampleModules = import.meta.glob("./examples/*.json", {eager: true});
@@ -520,10 +551,16 @@ function SketchEditor() {
       console.error("Failed to load examples:", error);
       alert("Failed to load examples. Please try again.");
     }
-  }, []);
+  }, [hasNewCodeToSave]);
 
   const handleSelectExample = useCallback(
     async (example) => {
+      // Note: We already checked when opening the examples modal, but check again in case user made changes
+      if (hasNewCodeToSave) {
+        if (!window.confirm("You have unsaved changes. Are you sure you want to load this example?")) {
+          return;
+        }
+      }
       try {
         // Create a new sketch from the example
         const newSketchId = uid();
@@ -546,7 +583,7 @@ function SketchEditor() {
         alert("Failed to load example. Please try again.");
       }
     },
-    [navigate]
+    [navigate, hasNewCodeToSave]
   );
 
   const handleSaveName = useCallback(
@@ -572,10 +609,16 @@ function SketchEditor() {
 
   const handleSelectSketch = useCallback(
     async (sketch) => {
+      // Note: We already checked when opening the modal, but check again in case user made changes
+      if (hasNewCodeToSave) {
+        if (!window.confirm("You have unsaved changes. Are you sure you want to switch to this sketch?")) {
+          return;
+        }
+      }
       setShowOpenModal(false);
       navigate(`/multiples/sketches/${sketch.id}`);
     },
-    [navigate]
+    [navigate, hasNewCodeToSave]
   );
 
   const handleDeleteSketch = useCallback(
