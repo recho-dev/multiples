@@ -7,13 +7,44 @@ import {Workspace} from "./components/Workspace.jsx";
 import {OpenSketchModal} from "./components/OpenSketchModal.jsx";
 import {ExamplesModal} from "./components/ExamplesModal.jsx";
 
+// const initialCode = `p.setup = () => {
+//   p.createCanvas(400, 400);
+// };
+
+// p.draw = () => {
+//   p.background(220);
+// };
+// `;
+
 const initialCode = `p.setup = () => {
-  p.createCanvas(400, 400);
+  p.createCanvas(200, 200);
+  p.background(0, 0, 0);
+  p.translate(p.width / 2, p.height);
+  branch(60, 1, 0);
 };
 
-p.draw = () => {
-  p.background(220);
-};
+function branch(len, strokeWeight, rotate) {
+  if (len < 10) {
+    p.fill(255, 255, 255);
+    p.circle(0, 0, 5);
+    return;
+  }
+  p.push();
+  p.rotate(rotate);
+  p.stroke(255, 255, 255);
+  p.strokeWeight(strokeWeight);
+  p.line(0, -len, 0, 0);
+  p.translate(0, -len);
+  len = len * safe(0.66);
+  strokeWeight = strokeWeight * safe(0.66);
+  branch(len, strokeWeight, -Math.PI / 6);
+  branch(len, strokeWeight, Math.PI / 6);
+  p.pop();
+}
+
+function safe(value) {
+  return p.constrain(value, 0.3, 0.9);
+}
 `;
 
 function SketchEditor() {
