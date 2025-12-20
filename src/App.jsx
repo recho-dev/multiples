@@ -45,7 +45,7 @@ function generateFriendlyName() {
 }
 
 function SketchEditor() {
-  const {id, navigate} = useRoute();
+  const {id, type, navigate} = useRoute();
   const [code, setCode] = useState(initialCode);
   const [editorCode, setEditorCode] = useState(initialCode); // Current code in editor
   const [hasNewCodeToRun, setHasNewCodeToRun] = useState(false); // Whether editor code differs from current code
@@ -109,7 +109,24 @@ function SketchEditor() {
       }
 
       try {
-        const sketch = await getSketch(id);
+        let sketch = null;
+
+        // If it's an example route, load from examples
+        if (type === "example") {
+          try {
+            const exampleModules = import.meta.glob("./examples/*.json", {eager: true});
+            const examples = Object.values(exampleModules).map((module) => {
+              return module.default || module;
+            });
+            sketch = examples.find((ex) => ex.id === id);
+          } catch (e) {
+            console.error("Failed to load examples:", e);
+          }
+        } else {
+          // Otherwise, try to load from localStorage
+          sketch = await getSketch(id);
+        }
+
         if (sketch) {
           lastLoadedSketchIdRef.current = id;
           setCurrentSketchId(sketch.id);
@@ -125,7 +142,7 @@ function SketchEditor() {
               setCode(selected.code);
               setEditorCode(selected.code);
               setHasNewCodeToRun(false);
-              setHasNewCodeToSave(false);
+              setHasNewCodeToSave(type === "example"); // Examples are not saved yet
               if (editorInstanceRef.current) {
                 editorInstanceRef.current.setCode(selected.code);
               }
@@ -134,7 +151,7 @@ function SketchEditor() {
               setCode(versions[0].code);
               setEditorCode(versions[0].code);
               setHasNewCodeToRun(false);
-              setHasNewCodeToSave(false);
+              setHasNewCodeToSave(type === "example"); // Examples are not saved yet
               if (editorInstanceRef.current) {
                 editorInstanceRef.current.setCode(versions[0].code);
               }
@@ -144,7 +161,7 @@ function SketchEditor() {
             setCode(versions[0].code);
             setEditorCode(versions[0].code);
             setHasNewCodeToRun(false);
-            setHasNewCodeToSave(false);
+            setHasNewCodeToSave(type === "example"); // Examples are not saved yet
             if (editorInstanceRef.current) {
               editorInstanceRef.current.setCode(versions[0].code);
             }
@@ -159,7 +176,7 @@ function SketchEditor() {
             }
           }
         } else {
-          // Sketch not found in localStorage
+          // Sketch/example not found
           // If this is the last loaded sketch, it might be an unsaved example
           // Keep it in memory and don't redirect
           if (lastLoadedSketchIdRef.current === id) {
@@ -181,7 +198,7 @@ function SketchEditor() {
     };
 
     loadSketchFromUrl();
-  }, [id, navigate]);
+  }, [id, type, navigate]);
 
   // Measure sidebar width
   useEffect(() => {
@@ -237,10 +254,20 @@ function SketchEditor() {
       onParamsChange,
     });
     return () => {
-      editorInstanceRef.current.destroy();
-      editorInstanceRef.current = null;
+      if (editorInstanceRef.current) {
+        editorInstanceRef.current.destroy();
+        editorInstanceRef.current = null;
+      }
     };
   }, []);
+
+  // Update editor code when code state changes (e.g., when loading from URL)
+  useEffect(() => {
+    if (editorInstanceRef.current && code !== editorInstanceRef.current.getCode()) {
+      editorInstanceRef.current.setCode(code);
+      setEditorCode(code);
+    }
+  }, [code]);
 
   // Track editor code changes and update button states
   useEffect(() => {
@@ -349,7 +376,7 @@ function SketchEditor() {
         // Save the updated sketch with nextVersionId
         await saveSketch(currentSketch);
       }
-      
+
       // Get the next version ID from the counter and increment it
       const nextVersionId = String(currentSketch.nextVersionId);
       currentSketch.nextVersionId = currentSketch.nextVersionId + 1;
@@ -600,8 +627,8 @@ function SketchEditor() {
         }
       }
       try {
-        // Create a new sketch ID but don't save it yet
-        const newSketchId = uid();
+        // Use the example's ID for the URL
+        const exampleId = example.id;
         const versions = example.versions || [];
         const selectedVersionId = example.selectedVersion || (versions.length > 0 ? versions[0].id : null);
 
@@ -618,25 +645,25 @@ function SketchEditor() {
           codeToLoad = versions[0].code;
         }
 
-        // Set up the sketch in memory (not saved yet)
-        lastLoadedSketchIdRef.current = newSketchId; // Mark as loaded to prevent reload
-        setCurrentSketchId(newSketchId);
+        // Set up the example in memory (not saved to localStorage yet)
+        lastLoadedSketchIdRef.current = exampleId; // Mark as loaded to prevent reload
+        setCurrentSketchId(exampleId);
         setCurrentSketchName(example.name);
         setCode(codeToLoad);
         setEditorCode(codeToLoad);
         setSavedVersions(versions);
         setCurrentVersionId(selectedVersionId);
         setHasNewCodeToRun(false);
-        setHasNewCodeToSave(true); // Mark as needing save since it's not saved yet
+        setHasNewCodeToSave(true); // Mark as needing save since it's not saved to localStorage yet
 
         // Load code into editor
         if (editorInstanceRef.current) {
           editorInstanceRef.current.setCode(codeToLoad);
         }
 
-        // Navigate to the sketch URL
+        // Navigate to the example URL
         setShowExamplesModal(false);
-        navigate(`/multiples/sketches/${newSketchId}`);
+        navigate(`/multiples/examples/${exampleId}`);
       } catch (error) {
         console.error("Failed to load example:", error);
         alert("Failed to load example. Please try again.");
