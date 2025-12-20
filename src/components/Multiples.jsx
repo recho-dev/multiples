@@ -1,4 +1,4 @@
-import {useMemo} from "react";
+import {useMemo, useState, useEffect} from "react";
 import {Sketch} from "./Sketch.jsx";
 import * as d3 from "d3";
 
@@ -15,57 +15,149 @@ function replaceValues(V, code, params) {
   });
 }
 
-function generateVariations(value, count) {
+function getDefaultRange(value, defaultCount = 4) {
   value = parseFloat(value);
   let [min, max] = [value * 0.5, value * 2];
   if (value === 0) [min, max] = [0, 100];
   if (min > max) [min, max] = [max, min];
-  const step = (max - min) / (count - 1);
-  return Array.from({length: count}, (_, i) => min + step * i).map((v) => v.toFixed(2));
+  return {min, max, count: defaultCount};
 }
 
-function generateXd(code, params, {count = 4} = {}) {
-  const V0 = generateVariations(params[0].value, count);
-  const V1 = generateVariations(params[1].value, count);
+function generateVariations(value, defaultCount, customRange = null) {
+  const defaultValue = parseFloat(value);
+  let min, max, count;
+
+  if (customRange) {
+    min = parseFloat(customRange.start);
+    max = parseFloat(customRange.end);
+    count = parseInt(customRange.count, 10) || defaultCount;
+  } else {
+    const defaultRange = getDefaultRange(value, defaultCount);
+    min = defaultRange.min;
+    max = defaultRange.max;
+    count = defaultRange.count;
+  }
+
+  if (isNaN(min) || isNaN(max) || isNaN(count) || count < 1) {
+    const defaultRange = getDefaultRange(value, defaultCount);
+    min = defaultRange.min;
+    max = defaultRange.max;
+    count = defaultRange.count;
+  }
+
+  if (min > max) [min, max] = [max, min];
+  if (count < 1) count = defaultCount;
+
+  // Generate evenly spaced values from min to max
+  const values = [];
+  if (count === 1) {
+    values.push(min);
+  } else {
+    const step = (max - min) / (count - 1);
+    for (let i = 0; i < count; i++) {
+      values.push(min + step * i);
+    }
+  }
+
+  return values.map((v) => parseFloat(v.toFixed(10)).toFixed(2));
+}
+
+function getParamKey(param) {
+  return `${param.from}-${param.to}`;
+}
+
+function generateXd(code, params, ranges, {count = 4} = {}) {
+  const V0 = generateVariations(params[0].value, count, ranges[getParamKey(params[0])]);
+  const V1 = generateVariations(params[1].value, count, ranges[getParamKey(params[1])]);
   const V = d3.cross(V0, V1);
   const [, , ...Vs] = params;
   const restV = Vs.map((v) => {
-    // const shuffler = d3.shuffler(d3.randomLcg(v.value));
-    // return shuffler(values);
-    const values = generateVariations(v.value, count ** 2);
+    const values = generateVariations(v.value, count ** 2, ranges[getParamKey(v)]);
     return values;
   });
   for (let i = 0; i < count ** 2; i++) V[i].push(...restV.map((v) => v[i]));
   return replaceValues(V, code, params);
 }
 
-function generate2d(code, params, {count = 4} = {}) {
-  const V0 = generateVariations(params[0].value, count);
-  const V1 = generateVariations(params[1].value, count);
+function generate2d(code, params, ranges, {count = 4} = {}) {
+  const V0 = generateVariations(params[0].value, count, ranges[getParamKey(params[0])]);
+  const V1 = generateVariations(params[1].value, count, ranges[getParamKey(params[1])]);
   const V = d3.cross(V0, V1);
   return replaceValues(V, code, params);
 }
 
-function generate1d(code, params, {count = 4} = {}) {
+function generate1d(code, params, ranges, {count = 4} = {}) {
   const {value, from, to} = params[0];
-  const V = generateVariations(value, count * 2);
+  const V = generateVariations(value, count * 2, ranges[getParamKey(params[0])]);
   return V.map((v) => ({
     code: code.slice(0, from) + v + code.slice(to),
     values: [v],
   }));
 }
 
-function generateCode(code, params, {count = 4} = {}) {
+function generateCode(code, params, ranges, {count = 4} = {}) {
   if (params.length === 0) return [];
-  if (params.length === 1) return generate1d(code, params, {count});
-  if (params.length === 2) return generate2d(code, params, {count});
-  return generateXd(code, params, {count});
+  if (params.length === 1) return generate1d(code, params, ranges, {count});
+  if (params.length === 2) return generate2d(code, params, ranges, {count});
+  return generateXd(code, params, ranges, {count});
 }
 
 export function Multiples({code, params, onSelect}) {
   const cols = 4;
 
-  const multiples = useMemo(() => generateCode(code, params, {count: cols}), [code, params]);
+  // Initialize range settings for each param
+  const [ranges, setRanges] = useState(() => {
+    const initialRanges = {};
+    params.forEach((param) => {
+      const key = getParamKey(param);
+      if (!initialRanges[key]) {
+        const defaultRange = getDefaultRange(param.value, cols);
+        initialRanges[key] = {
+          start: defaultRange.min.toFixed(2),
+          end: defaultRange.max.toFixed(2),
+          count: defaultRange.count.toString(),
+        };
+      }
+    });
+    return initialRanges;
+  });
+
+  // Update ranges when params change
+  useEffect(() => {
+    setRanges((prevRanges) => {
+      const newRanges = {...prevRanges};
+      params.forEach((param) => {
+        const key = getParamKey(param);
+        if (!newRanges[key]) {
+          const defaultRange = getDefaultRange(param.value, cols);
+          newRanges[key] = {
+            start: defaultRange.min.toFixed(2),
+            end: defaultRange.max.toFixed(2),
+            count: defaultRange.count.toString(),
+          };
+        }
+      });
+      // Remove ranges for params that no longer exist
+      Object.keys(newRanges).forEach((key) => {
+        if (!params.some((p) => getParamKey(p) === key)) {
+          delete newRanges[key];
+        }
+      });
+      return newRanges;
+    });
+  }, [params, cols]);
+
+  const updateRange = (paramKey, field, value) => {
+    setRanges((prev) => ({
+      ...prev,
+      [paramKey]: {
+        ...prev[paramKey],
+        [field]: value,
+      },
+    }));
+  };
+
+  const multiples = useMemo(() => generateCode(code, params, ranges, {count: cols}), [code, params, ranges]);
 
   const rows = useMemo(() => {
     const n = Math.ceil(multiples.length / cols);
@@ -82,14 +174,51 @@ export function Multiples({code, params, onSelect}) {
 
   return (
     <div>
-      <div>
-        {params.map((d, i) => (
-          <span key={d.from} className="inline-block pr-2 text-xs">
-            X{i}={d.value}
-          </span>
-        ))}
+      <div className="space-y-2 my-2">
+        {params.map((param, i) => {
+          const paramKey = getParamKey(param);
+          const range = ranges[paramKey] || {start: "0", end: "100", count: "4"};
+          return (
+            <div key={paramKey} className="flex items-center gap-4 text-xs">
+              <span className="w-8 mr-6">
+                X{i}={param.value}
+              </span>
+              <label className="flex items-center gap-1">
+                <span>start</span>
+                <input
+                  type="number"
+                  step="any"
+                  value={range.start}
+                  onChange={(e) => updateRange(paramKey, "start", e.target.value)}
+                  className="w-20 px-1 py-0.5 border border-gray-300 rounded text-xs"
+                />
+              </label>
+              <label className="flex items-center gap-1">
+                <span>end</span>
+                <input
+                  type="number"
+                  step="any"
+                  value={range.end}
+                  onChange={(e) => updateRange(paramKey, "end", e.target.value)}
+                  className="w-20 px-1 py-0.5 border border-gray-300 rounded text-xs"
+                />
+              </label>
+              <label className="flex items-center gap-1">
+                <span>count</span>
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  value={range.count}
+                  onChange={(e) => updateRange(paramKey, "count", e.target.value)}
+                  className="w-20 px-1 py-0.5 border border-gray-300 rounded text-xs"
+                />
+              </label>
+            </div>
+          );
+        })}
       </div>
-      <div>
+      <div className="mb-10">
         {rows.map((row, i) => (
           <div key={i} className="flex gap-6 py-3">
             {row.map((multiple, j) => (
@@ -99,7 +228,7 @@ export function Multiples({code, params, onSelect}) {
                 onClick={() => onSelect(multiple)}
               >
                 <Sketch code={multiple.code} width={200} height={200} />
-                <span className="text-xs">{`(${multiple.values.join(", ")})`}</span>
+                <span className="text-xs">{`(${multiple.values.map((v, idx) => `X${idx}=${v}`).join(", ")})`}</span>
               </div>
             ))}
           </div>
@@ -108,4 +237,3 @@ export function Multiples({code, params, onSelect}) {
     </div>
   );
 }
-
