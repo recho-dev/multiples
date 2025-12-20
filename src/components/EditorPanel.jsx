@@ -1,12 +1,16 @@
 import {EditableName} from "./EditableName.jsx";
 
-export function EditorPanel({editorRef, onRun, onSave, sketchName, onSaveName}) {
+export function EditorPanel({editorRef, onRun, onSave, sketchName, onSaveName, hasNewCodeToRun, hasNewCodeToSave}) {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center gap-2 p-2 border-b border-dashed border-gray-200">
         <button
           onClick={onRun}
-          className="w-10 h-10 bg-black hover:bg-gray-800 text-white rounded-full flex items-center justify-center transition-colors p-2 cursor-pointer"
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors p-2 cursor-pointer ${
+            hasNewCodeToRun
+              ? "bg-black hover:bg-gray-800 text-white"
+              : "bg-gray-300 hover:bg-gray-400 text-gray-600"
+          }`}
           title="Run"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -15,7 +19,11 @@ export function EditorPanel({editorRef, onRun, onSave, sketchName, onSaveName}) 
         </button>
         <button
           onClick={onSave}
-          className="w-10 h-10 bg-black hover:bg-gray-800 text-white rounded-full flex items-center justify-center transition-colors p-2 cursor-pointer"
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors p-2 cursor-pointer ${
+            hasNewCodeToSave
+              ? "bg-black hover:bg-gray-800 text-white"
+              : "bg-gray-300 hover:bg-gray-400 text-gray-600"
+          }`}
           title="Save"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

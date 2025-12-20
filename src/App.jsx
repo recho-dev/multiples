@@ -48,6 +48,9 @@ function SketchEditor() {
   const {id, navigate} = useRoute();
   const [code, setCode] = useState(initialCode);
   const [runnableCode, setRunnableCode] = useState(null); // Code that actually runs in preview
+  const [editorCode, setEditorCode] = useState(initialCode); // Current code in editor
+  const [hasNewCodeToRun, setHasNewCodeToRun] = useState(false); // Whether editor code differs from runnable code
+  const [hasNewCodeToSave, setHasNewCodeToSave] = useState(false); // Whether editor code differs from saved version
   const [params, setParams] = useState([]);
   const [showMultiples, setShowMultiples] = useState(false);
   const [savedVersions, setSavedVersions] = useState([]);
@@ -88,7 +91,10 @@ function SketchEditor() {
         setCurrentSketchId(null);
         setCurrentSketchName(null);
         setCode(initialCode);
+        setEditorCode(initialCode);
         setRunnableCode(null); // Don't run by default
+        setHasNewCodeToRun(false);
+        setHasNewCodeToSave(false);
         if (editorInstanceRef.current) {
           editorInstanceRef.current.setCode(initialCode);
         }
@@ -111,14 +117,20 @@ function SketchEditor() {
             if (selected) {
               setCurrentVersionId(selected.id);
               setCode(selected.code);
+              setEditorCode(selected.code);
               setRunnableCode(null); // Don't run by default
+              setHasNewCodeToRun(false);
+              setHasNewCodeToSave(false);
               if (editorInstanceRef.current) {
                 editorInstanceRef.current.setCode(selected.code);
               }
             } else if (versions.length > 0) {
               setCurrentVersionId(versions[0].id);
               setCode(versions[0].code);
+              setEditorCode(versions[0].code);
               setRunnableCode(null); // Don't run by default
+              setHasNewCodeToRun(false);
+              setHasNewCodeToSave(false);
               if (editorInstanceRef.current) {
                 editorInstanceRef.current.setCode(versions[0].code);
               }
@@ -126,14 +138,20 @@ function SketchEditor() {
           } else if (versions.length > 0) {
             setCurrentVersionId(versions[0].id);
             setCode(versions[0].code);
+            setEditorCode(versions[0].code);
             setRunnableCode(null); // Don't run by default
+            setHasNewCodeToRun(false);
+            setHasNewCodeToSave(false);
             if (editorInstanceRef.current) {
               editorInstanceRef.current.setCode(versions[0].code);
             }
           } else {
             setCurrentVersionId(null);
             setCode(initialCode);
+            setEditorCode(initialCode);
             setRunnableCode(null); // Don't run by default
+            setHasNewCodeToRun(false);
+            setHasNewCodeToSave(false);
             if (editorInstanceRef.current) {
               editorInstanceRef.current.setCode(initialCode);
             }
@@ -190,6 +208,7 @@ function SketchEditor() {
       if (!editorInstanceRef.current || params.length === 0) return;
       editorInstanceRef.current.update(params, values);
       setCode(code);
+      setEditorCode(code);
       setShowMultiples(false);
     },
     [params]
@@ -209,11 +228,48 @@ function SketchEditor() {
     };
   }, []);
 
+  // Track editor code changes and update button states
+  useEffect(() => {
+    if (!editorInstanceRef.current) return;
+
+    const checkEditorChanges = () => {
+      const currentEditorCode = editorInstanceRef.current.getCode();
+      setEditorCode(currentEditorCode);
+
+      // Check if there's new code to run
+      const needsRun = currentEditorCode !== (runnableCode || "");
+      setHasNewCodeToRun(needsRun);
+
+      // Check if there's new code to save
+      let needsSave = false;
+      if (currentVersionId) {
+        const currentVersion = savedVersions.find((v) => v.id === currentVersionId);
+        if (currentVersion) {
+          needsSave = currentVersion.code !== currentEditorCode;
+        } else {
+          needsSave = currentEditorCode !== initialCode;
+        }
+      } else {
+        // No version saved yet, check if code is different from initial
+        needsSave = currentEditorCode !== initialCode;
+      }
+      setHasNewCodeToSave(needsSave);
+    };
+
+    // Check on mount and set up interval to check for changes
+    checkEditorChanges();
+    const interval = setInterval(checkEditorChanges, 500); // Check every 500ms
+
+    return () => clearInterval(interval);
+  }, [runnableCode, currentVersionId, savedVersions]);
+
   const handleRun = useCallback(() => {
     if (editorInstanceRef.current) {
       const currentCode = editorInstanceRef.current.getCode();
       setCode(currentCode);
+      setEditorCode(currentCode);
       setRunnableCode(currentCode); // Update runnable code only when Run is clicked
+      setHasNewCodeToRun(false); // Reset after running
     }
   }, []);
 
@@ -281,6 +337,7 @@ function SketchEditor() {
         const updatedVersions = sketch.versions || [];
         setSavedVersions(updatedVersions);
         setCurrentVersionId(newVersion.id);
+        setHasNewCodeToSave(false); // Reset after saving
       }
     } catch (error) {
       console.error("Failed to save version:", error);
@@ -299,7 +356,10 @@ function SketchEditor() {
       if (editorInstanceRef.current && currentSketchId) {
         editorInstanceRef.current.setCode(version.code);
         setCode(version.code);
+        setEditorCode(version.code);
         setRunnableCode(null); // Don't run by default when loading a version
+        setHasNewCodeToRun(false);
+        setHasNewCodeToSave(false);
         setCurrentVersionId(version.id);
         // Update selected version in sketch
         await setSelectedVersion(currentSketchId, version.id);
@@ -579,6 +639,8 @@ function SketchEditor() {
             onSave={handleSave}
             sketchName={currentSketchName}
             onSaveName={handleSaveName}
+            hasNewCodeToRun={hasNewCodeToRun}
+            hasNewCodeToSave={hasNewCodeToSave}
           />
           <PreviewPanel
             showMultiples={showMultiples}
