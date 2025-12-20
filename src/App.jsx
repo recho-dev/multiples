@@ -19,6 +19,7 @@ import {HistoryPanel} from "./components/HistoryPanel.jsx";
 import {EditorPanel} from "./components/EditorPanel.jsx";
 import {PreviewPanel} from "./components/PreviewPanel.jsx";
 import {OpenSketchModal} from "./components/OpenSketchModal.jsx";
+import {ExamplesModal} from "./components/ExamplesModal.jsx";
 
 const initialCode = `p.setup = () => {
   p.createCanvas(400, 400);
@@ -55,6 +56,8 @@ function App() {
   const [currentSketchName, setCurrentSketchName] = useState(null);
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [availableSketches, setAvailableSketches] = useState([]);
+  const [showExamplesModal, setShowExamplesModal] = useState(false);
+  const [availableExamples, setAvailableExamples] = useState([]);
   const sidebarRef = useRef(null);
   const editorRef = useRef(null);
   const editorInstanceRef = useRef(null);
@@ -453,6 +456,48 @@ function App() {
     }
   }, []);
 
+  const handleExamples = useCallback(async () => {
+    try {
+      // Load all example files from the examples directory
+      const exampleModules = import.meta.glob("./examples/*.json", {eager: true});
+      const examples = Object.values(exampleModules).map((module) => {
+        // Vite imports JSON files as default exports
+        return module.default || module;
+      });
+      setAvailableExamples(examples);
+      setShowExamplesModal(true);
+    } catch (error) {
+      console.error("Failed to load examples:", error);
+      alert("Failed to load examples. Please try again.");
+    }
+  }, []);
+
+  const handleSelectExample = useCallback(async (example) => {
+    try {
+      // Create a new sketch from the example
+      const newSketchId = uid();
+      const exampleSketch = {
+        id: newSketchId,
+        name: example.name,
+        timestamp: new Date().toISOString(),
+        versions: example.versions || [],
+        selectedVersion: example.selectedVersion || (example.versions?.length > 0 ? example.versions[0].id : null),
+      };
+      
+      // Save the example as a new sketch
+      await saveSketch(exampleSketch);
+      
+      // Load it
+      setCurrentSketchId(newSketchId);
+      setCurrentSketchName(example.name);
+      setShowExamplesModal(false);
+      // Versions will be loaded by the useEffect that watches currentSketchId
+    } catch (error) {
+      console.error("Failed to load example:", error);
+      alert("Failed to load example. Please try again.");
+    }
+  }, []);
+
   const handleSaveName = useCallback(
     async (newName) => {
       if (!currentSketchId) return;
@@ -529,6 +574,7 @@ function App() {
         isFullscreen={isFullscreen}
         onNewSketch={handleNewSketch}
         onOpenSketch={handleOpenSketch}
+        onExamples={handleExamples}
         onDownloadAll={handleDownloadAll}
         hasVersions={savedVersions.length > 0}
         onFullscreen={handleFullscreen}
@@ -573,6 +619,13 @@ function App() {
           onSelect={handleSelectSketch}
           onDelete={handleDeleteSketch}
           onClose={() => setShowOpenModal(false)}
+        />
+      )}
+      {showExamplesModal && (
+        <ExamplesModal
+          examples={availableExamples}
+          onSelect={handleSelectExample}
+          onClose={() => setShowExamplesModal(false)}
         />
       )}
     </div>

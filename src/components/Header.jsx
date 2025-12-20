@@ -1,4 +1,4 @@
-export function Header({isFullscreen, onNewSketch, onOpenSketch, onDownloadAll, hasVersions, onFullscreen}) {
+export function Header({isFullscreen, onNewSketch, onOpenSketch, onExamples, onDownloadAll, hasVersions, onFullscreen}) {
   return (
     <header className="h-[50px] flex flex-col justify-center px-4 py-2 border-b border-gray-200 bg-black relative">
       {!isFullscreen && (
@@ -31,6 +31,13 @@ export function Header({isFullscreen, onNewSketch, onOpenSketch, onDownloadAll, 
             title="Open Sketch"
           >
             Open
+          </button>
+          <button
+            onClick={onExamples}
+            className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm"
+            title="Examples"
+          >
+            Examples
           </button>
           {hasVersions && (
             <button
