@@ -302,6 +302,7 @@ function SketchEditor() {
         timestamp: new Date().toISOString(),
         versions: [],
         selectedVersion: null,
+        nextVersionId: 0, // Initialize counter at 0
       });
       setCurrentSketchId(sketchId);
       setCurrentSketchName(newSketchName);
@@ -320,26 +321,50 @@ function SketchEditor() {
 
     try {
       // Check if sketch exists in localStorage, if not, save it first
-      const existingSketch = await getSketch(sketchId);
-      if (!existingSketch) {
+      let currentSketch = await getSketch(sketchId);
+      if (!currentSketch) {
         // Sketch doesn't exist yet, save it first
-        await saveSketch({
+        currentSketch = await saveSketch({
           id: sketchId,
           name: currentSketchName || generateFriendlyName(),
           timestamp: new Date().toISOString(),
           versions: [],
           selectedVersion: null,
+          nextVersionId: 0, // Initialize counter at 0
         });
       }
 
+      // Initialize nextVersionId if it doesn't exist (for backward compatibility)
+      if (currentSketch.nextVersionId === undefined) {
+        // Migrate existing sketches: find max version number and set counter
+        const existingVersions = currentSketch.versions || [];
+        let maxVersionNum = -1;
+        for (const version of existingVersions) {
+          const versionNum = parseInt(version.id, 10);
+          if (!isNaN(versionNum) && versionNum > maxVersionNum) {
+            maxVersionNum = versionNum;
+          }
+        }
+        currentSketch.nextVersionId = maxVersionNum + 1;
+        // Save the updated sketch with nextVersionId
+        await saveSketch(currentSketch);
+      }
+      
+      // Get the next version ID from the counter and increment it
+      const nextVersionId = String(currentSketch.nextVersionId);
+      currentSketch.nextVersionId = currentSketch.nextVersionId + 1;
+
       const newVersion = {
-        id: uid(),
+        id: nextVersionId,
         parentId: currentVersionId, // Track which version this was derived from
         code: currentCode,
         timestamp: new Date().toISOString(),
         time: new Date().toLocaleString(),
         name: null,
       };
+
+      // Save the updated counter first
+      await saveSketch(currentSketch);
 
       // Save version to sketch
       await saveVersion(sketchId, newVersion);
