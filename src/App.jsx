@@ -47,9 +47,8 @@ function generateFriendlyName() {
 function SketchEditor() {
   const {id, navigate} = useRoute();
   const [code, setCode] = useState(initialCode);
-  const [runnableCode, setRunnableCode] = useState(null); // Code that actually runs in preview
   const [editorCode, setEditorCode] = useState(initialCode); // Current code in editor
-  const [hasNewCodeToRun, setHasNewCodeToRun] = useState(false); // Whether editor code differs from runnable code
+  const [hasNewCodeToRun, setHasNewCodeToRun] = useState(false); // Whether editor code differs from current code
   const [hasNewCodeToSave, setHasNewCodeToSave] = useState(false); // Whether editor code differs from saved version
   const [params, setParams] = useState([]);
   const [showMultiples, setShowMultiples] = useState(false);
@@ -92,7 +91,6 @@ function SketchEditor() {
         setCurrentSketchName(null);
         setCode(initialCode);
         setEditorCode(initialCode);
-        setRunnableCode(null); // Don't run by default
         setHasNewCodeToRun(false);
         setHasNewCodeToSave(false);
         if (editorInstanceRef.current) {
@@ -118,7 +116,6 @@ function SketchEditor() {
               setCurrentVersionId(selected.id);
               setCode(selected.code);
               setEditorCode(selected.code);
-              setRunnableCode(null); // Don't run by default
               setHasNewCodeToRun(false);
               setHasNewCodeToSave(false);
               if (editorInstanceRef.current) {
@@ -128,7 +125,6 @@ function SketchEditor() {
               setCurrentVersionId(versions[0].id);
               setCode(versions[0].code);
               setEditorCode(versions[0].code);
-              setRunnableCode(null); // Don't run by default
               setHasNewCodeToRun(false);
               setHasNewCodeToSave(false);
               if (editorInstanceRef.current) {
@@ -139,7 +135,6 @@ function SketchEditor() {
             setCurrentVersionId(versions[0].id);
             setCode(versions[0].code);
             setEditorCode(versions[0].code);
-            setRunnableCode(null); // Don't run by default
             setHasNewCodeToRun(false);
             setHasNewCodeToSave(false);
             if (editorInstanceRef.current) {
@@ -149,7 +144,6 @@ function SketchEditor() {
             setCurrentVersionId(null);
             setCode(initialCode);
             setEditorCode(initialCode);
-            setRunnableCode(null); // Don't run by default
             setHasNewCodeToRun(false);
             setHasNewCodeToSave(false);
             if (editorInstanceRef.current) {
@@ -237,7 +231,7 @@ function SketchEditor() {
       setEditorCode(currentEditorCode);
 
       // Check if there's new code to run
-      const needsRun = currentEditorCode !== (runnableCode || "");
+      const needsRun = currentEditorCode !== code;
       setHasNewCodeToRun(needsRun);
 
       // Check if there's new code to save
@@ -261,14 +255,13 @@ function SketchEditor() {
     const interval = setInterval(checkEditorChanges, 500); // Check every 500ms
 
     return () => clearInterval(interval);
-  }, [runnableCode, currentVersionId, savedVersions]);
+  }, [code, currentVersionId, savedVersions]);
 
   const handleRun = useCallback(() => {
     if (editorInstanceRef.current) {
       const currentCode = editorInstanceRef.current.getCode();
       setCode(currentCode);
       setEditorCode(currentCode);
-      setRunnableCode(currentCode); // Update runnable code only when Run is clicked
       setHasNewCodeToRun(false); // Reset after running
     }
   }, []);
@@ -687,7 +680,7 @@ function SketchEditor() {
           />
           <PreviewPanel
             showMultiples={showMultiples}
-            code={runnableCode}
+            code={code}
             params={params}
             onToggleMultiples={setShowMultiples}
             onSelect={onSelect}
