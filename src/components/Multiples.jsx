@@ -218,7 +218,7 @@ export function Multiples({code, params, onSelect}) {
           );
         })}
       </div>
-      <div className="mb-10">
+      <div>
         {rows.map((row, i) => (
           <div key={i} className="flex gap-6 py-3">
             {row.map((multiple, j) => (
