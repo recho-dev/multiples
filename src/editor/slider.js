@@ -119,12 +119,19 @@ const numberSliderPlugin = ViewPlugin.fromClass(
         // Otherwise, the param was deleted or modified, so  skip it
       }
 
+      const paramsChanged = JSON.stringify(this.params) !== JSON.stringify(newParams);
       this.params = newParams;
 
-      // Update the state field
-      this.view.dispatch({
-        effects: setParamsEffect.of(this.params),
-      });
+      // Update the state field asynchronously to avoid dispatching during update
+      if (paramsChanged) {
+        requestAnimationFrame(() => {
+          if (this.view && !this.view.state.readOnly) {
+            this.view.dispatch({
+              effects: setParamsEffect.of(this.params),
+            });
+          }
+        });
+      }
 
       this.onParamsChange({
         params: this.params,
@@ -156,6 +163,7 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       this.activeNumber = number;
 
       const onChange = (newValue) => {
+        if (!this.activeNumber) return;
         // Format the number (remove trailing zeros for decimals)
         let formattedValue = String(newValue);
         if (formattedValue.includes(".")) formattedValue = parseFloat(formattedValue).toString();
