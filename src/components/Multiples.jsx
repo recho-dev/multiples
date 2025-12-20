@@ -24,8 +24,8 @@ function getDefaultRange(value, defaultCount = 4) {
 }
 
 function generateVariations(value, defaultCount, customRange = null) {
-  const defaultValue = parseFloat(value);
   let min, max, count;
+  const type = customRange?.type || "Float";
 
   if (customRange) {
     min = parseFloat(customRange.start);
@@ -48,6 +48,12 @@ function generateVariations(value, defaultCount, customRange = null) {
   if (min > max) [min, max] = [max, min];
   if (count < 1) count = defaultCount;
 
+  // Round min/max to integers if type is Int
+  if (type === "Int") {
+    min = Math.round(min);
+    max = Math.round(max);
+  }
+
   // Generate evenly spaced values from min to max
   const values = [];
   if (count === 1) {
@@ -55,11 +61,22 @@ function generateVariations(value, defaultCount, customRange = null) {
   } else {
     const step = (max - min) / (count - 1);
     for (let i = 0; i < count; i++) {
-      values.push(min + step * i);
+      let val = min + step * i;
+      // Round to integer if type is Int
+      if (type === "Int") {
+        val = Math.round(val);
+      }
+      values.push(val);
     }
   }
 
-  return values.map((v) => parseFloat(v.toFixed(10)).toFixed(2));
+  // Format output: integers without decimals, floats with 2 decimal places
+  return values.map((v) => {
+    if (type === "Int") {
+      return Math.round(v).toString();
+    }
+    return parseFloat(v.toFixed(10)).toFixed(2);
+  });
 }
 
 function getParamKey(param) {
@@ -116,6 +133,7 @@ export function Multiples({code, params, onSelect}) {
           start: defaultRange.min.toFixed(2),
           end: defaultRange.max.toFixed(2),
           count: defaultRange.count.toString(),
+          type: "Float",
         };
       }
     });
@@ -177,17 +195,28 @@ export function Multiples({code, params, onSelect}) {
       <div className="space-y-2 my-2">
         {params.map((param, i) => {
           const paramKey = getParamKey(param);
-          const range = ranges[paramKey] || {start: "0", end: "100", count: "4"};
+          const range = ranges[paramKey] || {start: "0", end: "100", count: "4", type: "Float"};
           return (
             <div key={paramKey} className="flex items-center gap-4 text-xs">
               <span className="w-8 mr-6">
                 X{i}={param.value}
               </span>
               <label className="flex items-center gap-1">
+                <span>type</span>
+                <select
+                  value={range.type || "Float"}
+                  onChange={(e) => updateRange(paramKey, "type", e.target.value)}
+                  className="w-16 px-1 py-0.5 border border-gray-300 rounded text-xs"
+                >
+                  <option value="Float">Float</option>
+                  <option value="Int">Int</option>
+                </select>
+              </label>
+              <label className="flex items-center gap-1">
                 <span>start</span>
                 <input
                   type="number"
-                  step="any"
+                  step={range.type === "Int" ? "1" : "any"}
                   value={range.start}
                   onChange={(e) => updateRange(paramKey, "start", e.target.value)}
                   className="w-20 px-1 py-0.5 border border-gray-300 rounded text-xs"
@@ -197,7 +226,7 @@ export function Multiples({code, params, onSelect}) {
                 <span>end</span>
                 <input
                   type="number"
-                  step="any"
+                  step={range.type === "Int" ? "1" : "any"}
                   value={range.end}
                   onChange={(e) => updateRange(paramKey, "end", e.target.value)}
                   className="w-20 px-1 py-0.5 border border-gray-300 rounded text-xs"
