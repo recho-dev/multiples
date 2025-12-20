@@ -54,6 +54,9 @@ export function Sketch({code, width, height}) {
     sketchRef.current.innerHTML = "";
     setError(null);
 
+    // Don't run if code is null or empty
+    if (!code) return;
+
     try {
       const parent = document.createElement("div");
       if (width !== undefined) {
