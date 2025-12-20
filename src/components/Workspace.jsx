@@ -178,13 +178,6 @@ export function Workspace({
     };
   }, []);
 
-  // Update editor code when code state changes
-  useEffect(() => {
-    if (editorInstanceRef.current && code !== editorInstanceRef.current.getCode()) {
-      editorInstanceRef.current.setCode(code);
-    }
-  }, [code]);
-
   // Track editor code changes and update button states
   useEffect(() => {
     if (!editorInstanceRef.current) return;

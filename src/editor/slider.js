@@ -69,7 +69,9 @@ const numberSliderPlugin = ViewPlugin.fromClass(
       if (update.docChanged) {
         this.updateParamPositions(update);
         const hasSliderUpdate = update.transactions.some((tr) => tr.annotation(ANNO_SLIDER_UPDATE));
-        if (this.popup && !hasSliderUpdate) this.closePopup();
+        if (this.popup && !hasSliderUpdate) {
+          this.closePopup();
+        }
       }
     }
 
