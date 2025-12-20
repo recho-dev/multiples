@@ -144,23 +144,51 @@ function SketchEditor() {
     }
   }, []);
 
-  const handleDownloadAll = useCallback(() => {
+  const handleDownloadAll = useCallback(async () => {
     if (savedVersions.length === 0) {
       alert("No versions to download");
       return;
     }
 
-    const dataStr = JSON.stringify(savedVersions, null, 2);
-    const dataBlob = new Blob([dataStr], {type: "application/json"});
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `recho-multiples-versions-${new Date().toISOString().split("T")[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [savedVersions]);
+    try {
+      let sketchData = null;
+
+      // If it's a saved sketch, get the full sketch data
+      if (currentSketchId && type !== "example") {
+        sketchData = await getSketch(currentSketchId);
+      }
+
+      // If sketch not found or it's an example, construct the sketch from current state
+      if (!sketchData) {
+        sketchData = {
+          id: currentSketchId || `sketch-${Date.now()}`,
+          name: currentSketchName || "Untitled Sketch",
+          timestamp: new Date().toISOString(),
+          versions: savedVersions,
+          selectedVersion: currentVersionId,
+        };
+      } else {
+        // Ensure we have the latest versions and selected version
+        sketchData.versions = savedVersions;
+        sketchData.selectedVersion = currentVersionId;
+      }
+
+      const dataStr = JSON.stringify(sketchData, null, 2);
+      const dataBlob = new Blob([dataStr], {type: "application/json"});
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      const sketchName = (currentSketchName || "sketch").replace(/[^a-z0-9]/gi, "-").toLowerCase();
+      link.download = `${sketchName}-${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to download sketch:", error);
+      alert("Failed to download sketch. Please try again.");
+    }
+  }, [currentSketchId, currentSketchName, savedVersions, currentVersionId, type]);
 
   const handleNewSketch = useCallback(() => {
     navigate("/multiples/");
