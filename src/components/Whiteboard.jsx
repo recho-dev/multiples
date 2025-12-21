@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState, useCallback} from "react";
 import {Sketch} from "./Sketch.jsx";
+import * as d3 from "d3";
 
 const SKETCH_PADDING = 20; // Padding around each sketch
 
@@ -41,10 +42,11 @@ function layoutNodes(nodes, padding = 0) {
 export function Whiteboard({versions, onClose}) {
   const containerRef = useRef(null);
   const viewportRef = useRef(null);
+  const zoomRef = useRef(null);
   const [positionedVersions, setPositionedVersions] = useState([]);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({x: 0, y: 0});
+  const [transform, setTransform] = useState(d3.zoomIdentity);
   const dimensionRefs = useRef({});
+  const initialTransformRef = useRef(null);
 
   const calculateLayout = useCallback(() => {
     if (versions.length === 0 || !containerRef.current) return;
@@ -94,16 +96,25 @@ export function Whiteboard({versions, onClose}) {
     const padding = 40;
     const scaleX = (containerWidth - padding * 2) / boundingWidth;
     const scaleY = (containerHeight - padding * 2) / boundingHeight;
-    const newZoom = Math.min(scaleX, scaleY, 1);
+    const scale = Math.min(scaleX, scaleY, 1);
 
     // Center the content
-    const scaledWidth = boundingWidth * newZoom;
-    const scaledHeight = boundingHeight * newZoom;
-    const newPanX = (containerWidth - scaledWidth) / 2 - minX * newZoom;
-    const newPanY = (containerHeight - scaledHeight) / 2 - minY * newZoom;
+    const scaledWidth = boundingWidth * scale;
+    const scaledHeight = boundingHeight * scale;
+    const translateX = (containerWidth - scaledWidth) / 2 - minX * scale;
+    const translateY = (containerHeight - scaledHeight) / 2 - minY * scale;
 
-    setZoom(newZoom);
-    setPan({x: newPanX, y: newPanY});
+    // Store initial transform for fit-to-bounds
+    const initialTransform = d3.zoomIdentity.translate(translateX, translateY).scale(scale);
+    initialTransformRef.current = initialTransform;
+
+    // Apply initial transform if zoom behavior is set up
+    if (zoomRef.current && containerRef.current) {
+      d3.select(containerRef.current).call(zoomRef.current.transform, initialTransform);
+    } else {
+      setTransform(initialTransform);
+    }
+
     setPositionedVersions(nodes);
   }, [versions]);
 
@@ -121,6 +132,35 @@ export function Whiteboard({versions, onClose}) {
     setPositionedVersions([]);
   }, [versions]);
 
+  // Set up d3-zoom behavior
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const zoomBehavior = d3
+      .zoom()
+      .scaleExtent([0.1, 5])
+      .on("zoom", (event) => {
+        setTransform(event.transform);
+      });
+
+    zoomRef.current = zoomBehavior;
+
+    const selection = d3.select(containerRef.current);
+    selection.call(zoomBehavior);
+
+    return () => {
+      selection.on(".zoom", null);
+      zoomRef.current = null;
+    };
+  }, []);
+
+  // Apply initial transform when it becomes available
+  useEffect(() => {
+    if (initialTransformRef.current && zoomRef.current && containerRef.current) {
+      d3.select(containerRef.current).call(zoomRef.current.transform, initialTransformRef.current);
+    }
+  }, [positionedVersions]);
+
   // Recalculate layout when container resizes
   useEffect(() => {
     if (!containerRef.current) return;
@@ -132,10 +172,11 @@ export function Whiteboard({versions, onClose}) {
   }, [calculateLayout]);
 
   return (
-    <div ref={containerRef} className="h-full w-full relative bg-gray-50 overflow-hidden">
+    <div ref={containerRef} className="h-full w-full relative bg-gray-50 overflow-hidden cursor-move">
       <button
         onClick={onClose}
-        className="absolute top-4 left-4 z-10 px-4 py-2 bg-white hover:bg-gray-100 border border-gray-300 rounded shadow-sm transition-colors"
+        className="absolute top-4 left-4 z-10 px-4 py-2 bg-white hover:bg-gray-100 border border-gray-300 rounded shadow-sm transition-colors pointer-events-auto"
+        onMouseDown={(e) => e.stopPropagation()}
       >
         Close Whiteboard
       </button>
@@ -150,10 +191,12 @@ export function Whiteboard({versions, onClose}) {
       {/* Visible positioned sketches */}
       <div
         ref={viewportRef}
-        className="absolute inset-0"
+        className="absolute"
         style={{
-          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.k})`,
           transformOrigin: "0 0",
+          width: "100%",
+          height: "100%",
         }}
       >
         {positionedVersions.map((node) => (
