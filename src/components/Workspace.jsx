@@ -94,6 +94,7 @@ export function Workspace({
     [sketchId, isExample, onSketchNameChange]
   );
   const [code, setCode] = useState(providedInitialCode);
+  const [previewCode, setPreviewCode] = useState(providedInitialCode);
   const [sketchType, setSketchType] = useState(providedSketchType);
   const [hasNewCodeToRun, setHasNewCodeToRun] = useState(false);
   const [hasNewCodeToSave, setHasNewCodeToSave] = useState(false);
@@ -131,6 +132,7 @@ export function Workspace({
   // Update code when initialCode prop changes (e.g., when loading from URL)
   useEffect(() => {
     setCode(providedInitialCode);
+    setPreviewCode(providedInitialCode);
     if (editorInstanceRef.current) {
       editorInstanceRef.current.setCode(providedInitialCode);
     }
@@ -203,6 +205,7 @@ export function Workspace({
 
   const onSliderChange = useCallback((code) => {
     setCode(code);
+    setPreviewCode(code);
   }, []);
 
   const onParamsChange = useCallback(({params, code, type}) => {
@@ -211,8 +214,9 @@ export function Workspace({
       return;
     }
 
-    // When positions are updated due to code edits, also update the code state
-    // to keep code and params in sync
+    // When positions are updated due to code edits, update the code state for multiples
+    // but don't update previewCode - that only updates when user explicitly runs
+    // This prevents the preview from automatically rerunning on every code edit
     if (type === "position-update" && code !== undefined) {
       setCode(code);
     }
@@ -253,6 +257,7 @@ export function Workspace({
       isSelectingFromMultiplesRef.current = true;
       editorInstanceRef.current.update(params, values);
       setCode(code);
+      setPreviewCode(code);
       setHasNewCodeToRun(false);
       setShowMultiples(false);
       // Reset the flag after a short delay to allow any pending updates to complete
@@ -295,6 +300,7 @@ export function Workspace({
       const version = pendingVersionToLoadRef.current;
       editorInstanceRef.current.setCode(version.code);
       setCode(version.code);
+      setPreviewCode(version.code);
       setHasNewCodeToRun(false);
       setHasNewCodeToSave(false);
       setCurrentVersionId(version.id);
@@ -449,6 +455,7 @@ export function Workspace({
     if (editorInstanceRef.current) {
       const currentCode = editorInstanceRef.current.getCode();
       setCode(currentCode);
+      setPreviewCode(currentCode);
       setHasNewCodeToRun(false);
     }
   }, []);
@@ -754,6 +761,7 @@ export function Workspace({
 
         editorInstanceRef.current.setCode(version.code);
         setCode(version.code);
+        setPreviewCode(version.code);
         setHasNewCodeToRun(false);
         setHasNewCodeToSave(false);
         setCurrentVersionId(version.id);
@@ -801,12 +809,14 @@ export function Workspace({
                   if (editorInstanceRef.current) {
                     editorInstanceRef.current.setCode(selected.code);
                     setCode(selected.code);
+                    setPreviewCode(selected.code);
                   }
                 } else if (updatedVersions.length > 0) {
                   setCurrentVersionId(updatedVersions[0].id);
                   if (editorInstanceRef.current) {
                     editorInstanceRef.current.setCode(updatedVersions[0].code);
                     setCode(updatedVersions[0].code);
+                    setPreviewCode(updatedVersions[0].code);
                   }
                 } else {
                   setCurrentVersionId(null);
@@ -816,6 +826,7 @@ export function Workspace({
                 if (editorInstanceRef.current) {
                   editorInstanceRef.current.setCode(updatedVersions[0].code);
                   setCode(updatedVersions[0].code);
+                  setPreviewCode(updatedVersions[0].code);
                 }
               } else {
                 setCurrentVersionId(null);
@@ -977,6 +988,7 @@ export function Workspace({
         <PreviewPanel
           showMultiples={showMultiples}
           code={code}
+          previewCode={previewCode}
           params={params}
           ranges={ranges}
           onRangesChange={setRanges}

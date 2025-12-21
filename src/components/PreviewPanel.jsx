@@ -5,6 +5,7 @@ import {Multiples} from "./Multiples.jsx";
 export function PreviewPanel({
   showMultiples,
   code,
+  previewCode,
   params,
   ranges = {},
   onRangesChange,
@@ -45,7 +46,7 @@ export function PreviewPanel({
             currentVersionId={currentVersionId}
           />
         ) : (
-          <Sketch code={code} sketchType={sketchType} />
+          <Sketch code={previewCode} sketchType={sketchType} />
         )}
       </div>
     </div>
