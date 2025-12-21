@@ -1,9 +1,11 @@
+import {forwardRef} from "react";
 import {Sketch} from "./Sketch.jsx";
 import {clsx} from "../clsx.js";
 
-export function VersionItem({version, isCurrent, width, onLoad, onDelete}) {
+export const VersionItem = forwardRef(function VersionItem({version, isCurrent, width, onLoad, onDelete}, ref) {
   return (
     <div
+      ref={ref}
       className={clsx(
         "rounded cursor-pointer transition-all border-2 overflow-hidden group relative",
         isCurrent
@@ -31,5 +33,4 @@ export function VersionItem({version, isCurrent, width, onLoad, onDelete}) {
       </button>
     </div>
   );
-}
-
+});

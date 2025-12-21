@@ -14,6 +14,7 @@ import {
 import {HistoryPanel} from "./HistoryPanel.jsx";
 import {EditorPanel} from "./EditorPanel.jsx";
 import {PreviewPanel} from "./PreviewPanel.jsx";
+import {Whiteboard} from "./Whiteboard.jsx";
 
 const initialCode = `p.setup = () => {
   p.createCanvas(400, 400);
@@ -81,9 +82,12 @@ export function Workspace({
   const [currentVersionId, setCurrentVersionId] = useState(initialVersionId);
   const [sidebarWidth, setSidebarWidth] = useState(176);
   const [splitSizes, setSplitSizes] = useState([15, 35, 50]);
+  const [showWhiteboard, setShowWhiteboard] = useState(false);
   const sidebarRef = useRef(null);
   const editorRef = useRef(null);
   const editorInstanceRef = useRef(null);
+  const editorInitializedRef = useRef(false);
+  const pendingVersionToLoadRef = useRef(null);
 
   // Update local state when props change
   useEffect(() => {
@@ -161,28 +165,63 @@ export function Workspace({
     [params]
   );
 
-  // Initialize editor
+  // Destroy editor when showing whiteboard, reinitialize when hiding whiteboard
   useEffect(() => {
-    if (!editorRef.current) return;
-    editorInstanceRef.current = createEditor(editorRef.current, {
-      initialCode: code,
-      onSave,
-      onSliderChange,
-      onParamsChange,
-    });
-    return () => {
+    if (showWhiteboard) {
+      // Destroy editor when showing whiteboard
       if (editorInstanceRef.current) {
         editorInstanceRef.current.destroy();
         editorInstanceRef.current = null;
       }
+      editorInitializedRef.current = false;
+      return;
+    }
+
+    // Initialize editor when not showing whiteboard and editor ref is available
+    if (!editorRef.current || editorInitializedRef.current) return;
+
+    // Use pending version code if available, otherwise use current code
+    const codeToLoad = pendingVersionToLoadRef.current?.code || code;
+
+    editorInstanceRef.current = createEditor(editorRef.current, {
+      initialCode: codeToLoad,
+      onSave,
+      onSliderChange,
+      onParamsChange,
+    });
+    editorInitializedRef.current = true;
+
+    // If there's a pending version to load, load it now
+    if (pendingVersionToLoadRef.current) {
+      const version = pendingVersionToLoadRef.current;
+      editorInstanceRef.current.setCode(version.code);
+      setCode(version.code);
+      setHasNewCodeToRun(false);
+      setHasNewCodeToSave(false);
+      setCurrentVersionId(version.id);
+      if (!isExample && sketchId) {
+        setSelectedVersion(sketchId, version.id).catch((err) => {
+          console.error("Failed to set selected version:", err);
+        });
+      }
+      pendingVersionToLoadRef.current = null;
+    }
+
+    return () => {
+      if (editorInstanceRef.current) {
+        editorInstanceRef.current.destroy();
+        editorInstanceRef.current = null;
+        editorInitializedRef.current = false;
+      }
     };
-  }, []);
+  }, [showWhiteboard, code, onSave, onSliderChange, onParamsChange, isExample, sketchId]);
 
   // Track editor code changes and update button states
   useEffect(() => {
-    if (!editorInstanceRef.current) return;
+    if (!editorInstanceRef.current || showWhiteboard) return;
 
     const checkEditorChanges = () => {
+      if (!editorInstanceRef.current) return;
       const currentEditorCode = editorInstanceRef.current.getCode();
 
       // Check if there's new code to run
@@ -208,7 +247,7 @@ export function Workspace({
     const interval = setInterval(checkEditorChanges, 500);
 
     return () => clearInterval(interval);
-  }, [code, currentVersionId, savedVersions]);
+  }, [code, currentVersionId, savedVersions, showWhiteboard]);
 
   const handleRun = useCallback(() => {
     if (editorInstanceRef.current) {
@@ -471,6 +510,33 @@ export function Workspace({
     };
   }, [hasNewCodeToSave]);
 
+  const handleWhiteboardClick = useCallback(() => {
+    setShowWhiteboard(true);
+  }, []);
+
+  const handleCloseWhiteboard = useCallback(() => {
+    setShowWhiteboard(false);
+  }, []);
+
+  const handleSelectVersionFromWhiteboard = useCallback((version) => {
+    // Store the version to load after editor reinitializes
+    pendingVersionToLoadRef.current = version;
+    // Close whiteboard to reinitialize editor
+    setShowWhiteboard(false);
+  }, []);
+
+  if (showWhiteboard) {
+    return (
+      <main className="h-[calc(100vh-50px)]">
+        <Whiteboard
+          versions={savedVersions}
+          onClose={handleCloseWhiteboard}
+          onSelectVersion={handleSelectVersionFromWhiteboard}
+        />
+      </main>
+    );
+  }
+
   return (
     <main className="h-[calc(100vh-50px)]">
       <Split
@@ -489,6 +555,7 @@ export function Workspace({
           sidebarWidth={sidebarWidth}
           onLoadVersion={handleLoadVersion}
           onDeleteVersion={handleDeleteVersion}
+          onWhiteboardClick={handleWhiteboardClick}
         />
         <EditorPanel
           editorRef={editorRef}
