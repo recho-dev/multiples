@@ -45,8 +45,17 @@ export function Whiteboard({versions, onClose}) {
   const zoomRef = useRef(null);
   const [positionedVersions, setPositionedVersions] = useState([]);
   const [transform, setTransform] = useState(d3.zoomIdentity);
+  const transformRef = useRef(d3.zoomIdentity);
   const dimensionRefs = useRef({});
   const initialTransformRef = useRef(null);
+  const dragStateRef = useRef({
+    isDragging: false,
+    nodeId: null,
+    startX: 0,
+    startY: 0,
+    initialNodeX: 0,
+    initialNodeY: 0,
+  });
 
   const calculateLayout = useCallback(() => {
     if (versions.length === 0 || !containerRef.current) return;
@@ -112,6 +121,7 @@ export function Whiteboard({versions, onClose}) {
     if (zoomRef.current && containerRef.current) {
       d3.select(containerRef.current).call(zoomRef.current.transform, initialTransform);
     } else {
+      transformRef.current = initialTransform;
       setTransform(initialTransform);
     }
 
@@ -139,7 +149,23 @@ export function Whiteboard({versions, onClose}) {
     const zoomBehavior = d3
       .zoom()
       .scaleExtent([0.1, 5])
+      .filter((event) => {
+        // Don't zoom if we're dragging a sketch
+        if (dragStateRef.current.isDragging) return false;
+        // Don't zoom if CMD/Ctrl is pressed on a sketch (user wants to drag sketch)
+        if (event.metaKey || event.ctrlKey) {
+          const target = event.target;
+          if (target.closest("[data-sketch-container]")) {
+            return false;
+          }
+        }
+        // Always allow zoom/pan otherwise
+        return true;
+      })
       .on("zoom", (event) => {
+        // Don't zoom if we're dragging a sketch
+        if (dragStateRef.current.isDragging) return;
+        transformRef.current = event.transform;
         setTransform(event.transform);
       });
 
@@ -170,6 +196,73 @@ export function Whiteboard({versions, onClose}) {
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
   }, [calculateLayout]);
+
+  // Handle dragging sketches (only when CMD/Ctrl is pressed)
+  const handleMouseDown = useCallback((e, nodeId, nodeX, nodeY) => {
+    // Only allow sketch dragging if CMD (Mac) or Ctrl (Windows/Linux) is pressed
+    if (!e.metaKey && !e.ctrlKey) {
+      // Let the event bubble up for whiteboard pan/zoom
+      return;
+    }
+    e.stopPropagation();
+    e.preventDefault();
+
+    dragStateRef.current = {
+      isDragging: true,
+      nodeId,
+      startX: e.clientX,
+      startY: e.clientY,
+      initialNodeX: nodeX,
+      initialNodeY: nodeY,
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!dragStateRef.current.isDragging) return;
+
+      // Calculate the delta in screen coordinates
+      const deltaX = e.clientX - dragStateRef.current.startX;
+      const deltaY = e.clientY - dragStateRef.current.startY;
+
+      // Convert screen delta to transformed coordinate space using current transform
+      const currentTransform = transformRef.current;
+      const transformedDeltaX = deltaX / currentTransform.k;
+      const transformedDeltaY = deltaY / currentTransform.k;
+
+      // Update the node position
+      setPositionedVersions((prev) =>
+        prev.map((node) => {
+          if (node.id === dragStateRef.current.nodeId) {
+            return {
+              ...node,
+              x: dragStateRef.current.initialNodeX + transformedDeltaX,
+              y: dragStateRef.current.initialNodeY + transformedDeltaY,
+            };
+          }
+          return node;
+        })
+      );
+    };
+
+    const handleMouseUp = () => {
+      const wasDragging = dragStateRef.current.isDragging;
+      dragStateRef.current.isDragging = false;
+
+      // Restore the current transform to d3-zoom to prevent jumps
+      if (wasDragging && zoomRef.current && containerRef.current) {
+        const currentTransform = transformRef.current;
+        d3.select(containerRef.current).call(zoomRef.current.transform, currentTransform);
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
 
   return (
     <div ref={containerRef} className="h-full w-full relative bg-gray-50 overflow-hidden cursor-move">
@@ -208,8 +301,14 @@ export function Whiteboard({versions, onClose}) {
           style={{
             backgroundColor: "#f9fafb",
             backgroundImage: `
-              linear-gradient(to right, #e5e7eb ${Math.max(1, 1 / transform.k)}px, transparent ${Math.max(1, 1 / transform.k)}px),
-              linear-gradient(to bottom, #e5e7eb ${Math.max(1, 1 / transform.k)}px, transparent ${Math.max(1, 1 / transform.k)}px)
+              linear-gradient(to right, #e5e7eb ${Math.max(1, 1 / transform.k)}px, transparent ${Math.max(
+              1,
+              1 / transform.k
+            )}px),
+              linear-gradient(to bottom, #e5e7eb ${Math.max(1, 1 / transform.k)}px, transparent ${Math.max(
+              1,
+              1 / transform.k
+            )}px)
             `,
             backgroundSize: "200px 200px",
             pointerEvents: "none",
@@ -222,12 +321,25 @@ export function Whiteboard({versions, onClose}) {
         {positionedVersions.map((node) => (
           <div
             key={node.id}
+            data-sketch-container
             className="absolute border border-gray-200 bg-white shadow-sm"
             style={{
               left: `${node.x}px`,
               top: `${node.y}px`,
               width: `${node.data.width}px`,
               height: `${node.data.height}px`,
+              cursor: dragStateRef.current.isDragging && dragStateRef.current.nodeId === node.id ? "grabbing" : "grab",
+            }}
+            onMouseDown={(e) => handleMouseDown(e, node.id, node.x, node.y)}
+            onMouseEnter={(e) => {
+              if (e.metaKey || e.ctrlKey) {
+                e.currentTarget.style.cursor = "grab";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!dragStateRef.current.isDragging) {
+                e.currentTarget.style.cursor = "default";
+              }
             }}
           >
             <Sketch code={node.version.code} width={node.data.width} height={node.data.height} />
