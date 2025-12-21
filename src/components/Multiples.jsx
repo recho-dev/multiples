@@ -1,4 +1,4 @@
-import {useMemo, useState, useEffect} from "react";
+import {useMemo, useState, useEffect, useRef} from "react";
 import {Sketch} from "./Sketch.jsx";
 import * as d3 from "d3";
 
@@ -119,17 +119,28 @@ function generateCode(code, params, ranges, {count = 4} = {}) {
   return generateXd(code, params, ranges, {count});
 }
 
-export function Multiples({code, params, sketchType = "p5", onSelect}) {
+export function Multiples({
+  code,
+  params,
+  ranges: initialRanges = {},
+  onRangesChange,
+  sketchType = "p5",
+  onSelect,
+  sketchId,
+  currentVersionId,
+}) {
   const cols = 4;
+  const skipNotificationRef = useRef(false);
+  const prevInitialRangesRef = useRef(JSON.stringify(initialRanges));
 
-  // Initialize range settings for each param
+  // Initialize range settings for each param, using initialRanges if provided
   const [ranges, setRanges] = useState(() => {
-    const initialRanges = {};
+    const ranges = {...initialRanges};
     params.forEach((param) => {
       const key = getParamKey(param);
-      if (!initialRanges[key]) {
+      if (!ranges[key]) {
         const defaultRange = getDefaultRange(param.value, cols);
-        initialRanges[key] = {
+        ranges[key] = {
           start: defaultRange.min.toFixed(2),
           end: defaultRange.max.toFixed(2),
           count: defaultRange.count.toString(),
@@ -137,8 +148,38 @@ export function Multiples({code, params, sketchType = "p5", onSelect}) {
         };
       }
     });
-    return initialRanges;
+    return ranges;
   });
+
+  // Update ranges when initialRanges prop changes (e.g., when loading a version)
+  useEffect(() => {
+    const currentInitialRangesStr = JSON.stringify(initialRanges);
+    if (currentInitialRangesStr !== prevInitialRangesRef.current && Object.keys(initialRanges).length > 0) {
+      skipNotificationRef.current = true;
+      prevInitialRangesRef.current = currentInitialRangesStr;
+      setRanges((prevRanges) => {
+        const newRanges = {...initialRanges};
+        // Fill in any missing ranges with defaults for current params
+        params.forEach((param) => {
+          const key = getParamKey(param);
+          if (!newRanges[key]) {
+            const defaultRange = getDefaultRange(param.value, cols);
+            newRanges[key] = {
+              start: defaultRange.min.toFixed(2),
+              end: defaultRange.max.toFixed(2),
+              count: defaultRange.count.toString(),
+              type: "Float",
+            };
+          }
+        });
+        return newRanges;
+      });
+      // Reset the flag in the next tick after state has updated
+      requestAnimationFrame(() => {
+        skipNotificationRef.current = false;
+      });
+    }
+  }, [initialRanges, params, cols]);
 
   // Update ranges when params change
   useEffect(() => {
@@ -152,6 +193,7 @@ export function Multiples({code, params, sketchType = "p5", onSelect}) {
             start: defaultRange.min.toFixed(2),
             end: defaultRange.max.toFixed(2),
             count: defaultRange.count.toString(),
+            type: "Float",
           };
         }
       });
@@ -165,14 +207,33 @@ export function Multiples({code, params, sketchType = "p5", onSelect}) {
     });
   }, [params, cols]);
 
+  // Notify parent of range changes only when not updating from parent
+  useEffect(() => {
+    if (skipNotificationRef.current) {
+      skipNotificationRef.current = false;
+      return;
+    }
+    if (onRangesChange) {
+      // Only notify if ranges differ from initialRanges (user-initiated change)
+      const rangesStr = JSON.stringify(ranges);
+      const initialRangesStr = JSON.stringify(initialRanges);
+      if (rangesStr !== initialRangesStr) {
+        onRangesChange(ranges);
+      }
+    }
+  }, [ranges, onRangesChange, initialRanges]);
+
   const updateRange = (paramKey, field, value) => {
-    setRanges((prev) => ({
-      ...prev,
-      [paramKey]: {
-        ...prev[paramKey],
-        [field]: value,
-      },
-    }));
+    setRanges((prev) => {
+      const newRanges = {
+        ...prev,
+        [paramKey]: {
+          ...prev[paramKey],
+          [field]: value,
+        },
+      };
+      return newRanges;
+    });
   };
 
   const multiples = useMemo(() => generateCode(code, params, ranges, {count: cols}), [code, params, ranges]);
@@ -197,7 +258,10 @@ export function Multiples({code, params, sketchType = "p5", onSelect}) {
           const paramKey = getParamKey(param);
           const range = ranges[paramKey] || {start: "0", end: "100", count: "4", type: "Float"};
           return (
-            <div key={paramKey} className="flex items-center gap-4 text-xs">
+            <div
+              key={`${sketchId || "new"}-${currentVersionId || "none"}-${i}-${paramKey}`}
+              className="flex items-center gap-4 text-xs"
+            >
               <span className="w-8 mr-6">
                 X{i}={param.value}
               </span>

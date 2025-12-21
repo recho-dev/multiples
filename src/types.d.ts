@@ -19,6 +19,13 @@ export interface Version {
   name: string | null;
   /** The code content of this version */
   code: string;
+  /** Optional parameters configuration for editor sliders */
+  params?: {
+    /** Array of parameter definitions (positions and values) */
+    definitions: Array<{from: number; to: number; value: string}>;
+    /** Range settings keyed by `${from}-${to}` */
+    ranges: Record<string, {start: string; end: string; count: string; type: "Float" | "Int"}>;
+  };
 }
 
 /**

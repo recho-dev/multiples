@@ -85,6 +85,26 @@ const numberSliderPlugin = ViewPlugin.fromClass(
     }
 
     update(update) {
+      // Check if params were set via setParamsEffect (effects are in transactions)
+      let paramsUpdated = false;
+      for (const tr of update.transactions) {
+        for (const effect of tr.effects) {
+          if (effect.is(setParamsEffect)) {
+            this.params = effect.value;
+            paramsUpdated = true;
+          }
+        }
+      }
+
+      if (paramsUpdated) {
+        // Trigger onParamsChange when params are set externally
+        this.onParamsChange({
+          params: this.params,
+          code: this.view.state.doc.toString(),
+          type: "params-update",
+        });
+      }
+
       if (update.docChanged) {
         this.updateParamPositions(update);
         const hasSliderUpdate = update.transactions.some((tr) => tr.annotation(ANNO_SLIDER_UPDATE));

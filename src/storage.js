@@ -94,6 +94,7 @@ export async function saveVersion(sketchId, version) {
       time: version.time,
       name: version.name,
       code: version.code,
+      ...(version.params && {params: version.params}),
     };
 
     // Add or update version
