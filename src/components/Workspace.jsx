@@ -218,9 +218,10 @@ export function Workspace({
 
   // Track editor code changes and update button states
   useEffect(() => {
-    if (!editorInstanceRef.current) return;
+    if (!editorInstanceRef.current || showWhiteboard) return;
 
     const checkEditorChanges = () => {
+      if (!editorInstanceRef.current) return;
       const currentEditorCode = editorInstanceRef.current.getCode();
 
       // Check if there's new code to run
@@ -246,7 +247,7 @@ export function Workspace({
     const interval = setInterval(checkEditorChanges, 500);
 
     return () => clearInterval(interval);
-  }, [code, currentVersionId, savedVersions]);
+  }, [code, currentVersionId, savedVersions, showWhiteboard]);
 
   const handleRun = useCallback(() => {
     if (editorInstanceRef.current) {
