@@ -44,6 +44,7 @@ export function Workspace({
   versions: initialVersions = [],
   currentVersionId: initialVersionId = null,
   initialCode: providedInitialCode = initialCode,
+  sketchType: providedSketchType = "p5",
   isExample = false,
   onSketchIdChange,
   onSketchNameChange,
@@ -74,6 +75,7 @@ export function Workspace({
     [sketchId, isExample, onSketchNameChange]
   );
   const [code, setCode] = useState(providedInitialCode);
+  const [sketchType, setSketchType] = useState(providedSketchType);
   const [hasNewCodeToRun, setHasNewCodeToRun] = useState(false);
   const [hasNewCodeToSave, setHasNewCodeToSave] = useState(false);
   const [params, setParams] = useState([]);
@@ -97,6 +99,11 @@ export function Workspace({
   useEffect(() => {
     setCurrentVersionId(initialVersionId);
   }, [initialVersionId]);
+
+  // Update sketchType when prop changes
+  useEffect(() => {
+    setSketchType(providedSketchType);
+  }, [providedSketchType]);
 
   // Update code when initialCode prop changes (e.g., when loading from URL)
   useEffect(() => {
@@ -185,6 +192,7 @@ export function Workspace({
 
     editorInstanceRef.current = createEditor(editorRef.current, {
       initialCode: codeToLoad,
+      sketchType,
       onSave,
       onSliderChange,
       onParamsChange,
@@ -214,7 +222,7 @@ export function Workspace({
         editorInitializedRef.current = false;
       }
     };
-  }, [showWhiteboard, code, onSave, onSliderChange, onParamsChange, isExample, sketchId]);
+  }, [showWhiteboard, code, sketchType, onSave, onSliderChange, onParamsChange, isExample, sketchId]);
 
   // Track editor code changes and update button states
   useEffect(() => {
@@ -287,6 +295,7 @@ export function Workspace({
       const newSketch = {
         id: newSketchId,
         name: newSketchName,
+        type: sketchType,
         timestamp: new Date().toISOString(),
         versions: forkedVersions,
         selectedVersion: currentVersionId || (forkedVersions.length > 0 ? forkedVersions[0].id : null),
@@ -319,6 +328,7 @@ export function Workspace({
       await saveSketch({
         id: currentSketchId,
         name: newSketchName,
+        type: sketchType,
         timestamp: new Date().toISOString(),
         versions: [],
         selectedVersion: null,
@@ -343,11 +353,18 @@ export function Workspace({
         currentSketch = await saveSketch({
           id: currentSketchId,
           name: sketchName || generateFriendlyName(),
+          type: sketchType,
           timestamp: new Date().toISOString(),
           versions: [],
           selectedVersion: null,
           nextVersionId: 0,
         });
+      } else {
+        // Update sketch type if it changed
+        if (currentSketch.type !== sketchType) {
+          currentSketch.type = sketchType;
+          await saveSketch(currentSketch);
+        }
       }
 
       // Initialize nextVersionId if it doesn't exist
@@ -572,6 +589,7 @@ export function Workspace({
           showMultiples={showMultiples}
           code={code}
           params={params}
+          sketchType={sketchType}
           onToggleMultiples={setShowMultiples}
           onSelect={onSelect}
         />

@@ -16,7 +16,7 @@ import {ExamplesModal} from "./components/ExamplesModal.jsx";
 // };
 // `;
 
-const initialCode = `p.setup = () => {
+const initialCodeP5 = `p.setup = () => {
   p.createCanvas(200, 200);
   p.background(0, 0, 0);
   p.translate(p.width / 2, p.height);
@@ -47,13 +47,35 @@ function safe(value) {
 }
 `;
 
+const initialCodeWebGL2 = `#version 300 es
+precision highp float;
+uniform float uTime;
+in  vec3 vPos;
+out vec4 fragColor;
+
+void main() {
+   vec4 F = vec4(.0);
+   float x = vPos.x * 2.;
+   float y = vPos.y * 2.;
+   float z = sqrt(1. - x*x - y*y);
+   if(z > 0.) {
+     float c = .1 + .5 * max(0., x+y+z);
+     float a = noise(10. * vec3(x, y, z) - vec3(uTime,0., 0.));
+     float t = .5 + sin(a * 20.) * .5;
+     c *=t;
+     F = vec4(c,c,c,1.);
+   }
+   fragColor = vec4(sqrt(F.rgb), F.a);
+}`;
+
 function SketchEditor() {
   const {id, type, navigate} = useRoute();
   const [currentSketchId, setCurrentSketchId] = useState(id || null);
   const [currentSketchName, setCurrentSketchName] = useState(null);
   const [savedVersions, setSavedVersions] = useState([]);
   const [currentVersionId, setCurrentVersionId] = useState(null);
-  const [initialCodeToLoad, setInitialCodeToLoad] = useState(initialCode);
+  const [sketchType, setSketchType] = useState("p5"); // "p5" or "webgl2"
+  const [initialCodeToLoad, setInitialCodeToLoad] = useState(initialCodeP5);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [availableSketches, setAvailableSketches] = useState([]);
@@ -73,7 +95,12 @@ function SketchEditor() {
         lastLoadedSketchIdRef.current = null;
         setCurrentSketchId(null);
         setCurrentSketchName(null);
-        setInitialCodeToLoad(initialCode);
+        // Use current sketchType or default to "p5"
+        setSketchType((prev) => {
+          const type = prev || "p5";
+          setInitialCodeToLoad(type === "webgl2" ? initialCodeWebGL2 : initialCodeP5);
+          return type;
+        });
         setCurrentVersionId(null);
         setSavedVersions([]);
         return;
@@ -102,11 +129,16 @@ function SketchEditor() {
           lastLoadedSketchIdRef.current = id;
           setCurrentSketchId(sketch.id);
           setCurrentSketchName(sketch.name);
+
+          // Get sketch type from sketch metadata, default to "p5"
+          const sketchTypeValue = sketch.type || "p5";
+          setSketchType(sketchTypeValue);
+
           const versions = sketch.versions || [];
           setSavedVersions(versions);
 
           // Load selected version or first version
-          let codeToLoad = initialCode;
+          let codeToLoad = sketchTypeValue === "webgl2" ? initialCodeWebGL2 : initialCodeP5;
           let versionId = null;
 
           if (sketch.selectedVersion) {
@@ -221,9 +253,14 @@ function SketchEditor() {
     }
   }, [currentSketchId, currentSketchName, savedVersions, currentVersionId, type]);
 
-  const handleNewSketch = useCallback(() => {
-    navigate("/multiples/");
-  }, [navigate]);
+  const handleNewSketch = useCallback(
+    (type = "p5") => {
+      setSketchType(type);
+      setInitialCodeToLoad(type === "webgl2" ? initialCodeWebGL2 : initialCodeP5);
+      navigate("/multiples/");
+    },
+    [navigate]
+  );
 
   const handleOpenSketch = useCallback(async () => {
     try {
@@ -261,7 +298,12 @@ function SketchEditor() {
         setSavedVersions(versions);
 
         const selectedVersionId = example.selectedVersion || (versions.length > 0 ? versions[0].id : null);
-        let codeToLoad = initialCode;
+
+        // Get sketch type from example metadata, default to "p5"
+        const exampleType = example.type || "p5";
+        setSketchType(exampleType);
+
+        let codeToLoad = exampleType === "webgl2" ? initialCodeWebGL2 : initialCodeP5;
         if (selectedVersionId && versions.length > 0) {
           const selectedVersion = versions.find((v) => v.id === selectedVersionId);
           if (selectedVersion) {
@@ -334,6 +376,7 @@ function SketchEditor() {
         versions={savedVersions}
         currentVersionId={currentVersionId}
         initialCode={initialCodeToLoad}
+        sketchType={sketchType}
         isExample={type === "example"}
         onSketchIdChange={setCurrentSketchId}
         onSketchNameChange={setCurrentSketchName}

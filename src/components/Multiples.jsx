@@ -119,7 +119,7 @@ function generateCode(code, params, ranges, {count = 4} = {}) {
   return generateXd(code, params, ranges, {count});
 }
 
-export function Multiples({code, params, onSelect}) {
+export function Multiples({code, params, sketchType = "p5", onSelect}) {
   const cols = 4;
 
   // Initialize range settings for each param
@@ -256,7 +256,7 @@ export function Multiples({code, params, onSelect}) {
                 className="w-[200px] h-[200px] cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => onSelect(multiple)}
               >
-                <Sketch code={multiple.code} width={200} height={200} />
+                <Sketch code={multiple.code} width={200} height={200} sketchType={sketchType} />
                 <span className="text-xs">{`(${multiple.values.map((v, idx) => `X${idx}=${v}`).join(", ")})`}</span>
               </div>
             ))}

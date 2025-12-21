@@ -2,7 +2,7 @@ import {clsx} from "../clsx.js";
 import {Sketch} from "./Sketch.jsx";
 import {Multiples} from "./Multiples.jsx";
 
-export function PreviewPanel({showMultiples, code, params, onToggleMultiples, onSelect}) {
+export function PreviewPanel({showMultiples, code, params, sketchType = "p5", onToggleMultiples, onSelect}) {
   return (
     <div className="h-full flex flex-col ml-4 mt-2 pb-4">
       <div className="flex gap-2 mb-2 flex-shrink-0">
@@ -22,7 +22,11 @@ export function PreviewPanel({showMultiples, code, params, onToggleMultiples, on
         )}
       </div>
       <div className="flex-1 overflow-auto">
-        {showMultiples ? <Multiples code={code} params={params} onSelect={onSelect} /> : <Sketch code={code} />}
+        {showMultiples ? (
+          <Multiples code={code} params={params} sketchType={sketchType} onSelect={onSelect} />
+        ) : (
+          <Sketch code={code} sketchType={sketchType} />
+        )}
       </div>
     </div>
   );

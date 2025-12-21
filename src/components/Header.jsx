@@ -1,4 +1,35 @@
-export function Header({isFullscreen, onNewSketch, onOpenSketch, onExamples, onDownloadAll, hasVersions, onFullscreen}) {
+import {useState, useRef, useEffect} from "react";
+
+export function Header({
+  isFullscreen,
+  onNewSketch,
+  onOpenSketch,
+  onExamples,
+  onDownloadAll,
+  hasVersions,
+  onFullscreen,
+}) {
+  const [showNewDropdown, setShowNewDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowNewDropdown(false);
+      }
+    };
+
+    if (showNewDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showNewDropdown]);
+
+  const handleNewSketchSelect = (type) => {
+    setShowNewDropdown(false);
+    onNewSketch(type);
+  };
+
   return (
     <header className="h-[50px] flex flex-col justify-center px-4 py-2 border-b border-gray-200 bg-black relative">
       {!isFullscreen && (
@@ -18,13 +49,31 @@ export function Header({isFullscreen, onNewSketch, onOpenSketch, onExamples, onD
           <strong>Recho Multiples</strong>
         </h1>
         <div className="flex items-center gap-2">
-          <button
-            onClick={onNewSketch}
-            className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm"
-            title="New Sketch"
-          >
-            New
-          </button>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowNewDropdown(!showNewDropdown)}
+              className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm"
+              title="New Sketch"
+            >
+              New
+            </button>
+            {showNewDropdown && (
+              <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-[160px]">
+                <button
+                  onClick={() => handleNewSketchSelect("p5")}
+                  className="w-full text-left px-3 py-2 text-white hover:bg-gray-700 text-sm block"
+                >
+                  p5
+                </button>
+                <button
+                  onClick={() => handleNewSketchSelect("webgl2")}
+                  className="w-full text-left px-3 py-2 text-white hover:bg-gray-700 text-sm block"
+                >
+                  WebGL2 Shader
+                </button>
+              </div>
+            )}
+          </div>
           <button
             onClick={onOpenSketch}
             className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm"
@@ -53,4 +102,3 @@ export function Header({isFullscreen, onNewSketch, onOpenSketch, onExamples, onD
     </header>
   );
 }
-
