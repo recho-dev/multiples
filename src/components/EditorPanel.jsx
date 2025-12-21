@@ -1,6 +1,17 @@
 import {EditableName} from "./EditableName.jsx";
 
-export function EditorPanel({editorRef, onRun, onSave, onFork, sketchName, onSaveName, hasNewCodeToRun, hasNewCodeToSave, isExample}) {
+export function EditorPanel({
+  editorRef,
+  onRun,
+  onSave,
+  onDuplicate,
+  onFork,
+  sketchName,
+  onSaveName,
+  hasNewCodeToRun,
+  hasNewCodeToSave,
+  isExample,
+}) {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center gap-2 p-2 border-b border-dashed border-gray-200">
@@ -31,21 +42,33 @@ export function EditorPanel({editorRef, onRun, onSave, onFork, sketchName, onSav
             </svg>
           </button>
         ) : (
-          <button
-            onClick={onSave}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors p-2 cursor-pointer ${
-              hasNewCodeToSave
-                ? "bg-black hover:bg-gray-800 text-white"
-                : "bg-gray-300 hover:bg-gray-400 text-gray-600"
-            }`}
-            title="Save"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-              <polyline points="17 21 17 13 7 13 7 21" />
-              <polyline points="7 3 7 8 15 8" />
-            </svg>
-          </button>
+          <>
+            <button
+              onClick={onSave}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors p-2 cursor-pointer ${
+                hasNewCodeToSave
+                  ? "bg-black hover:bg-gray-800 text-white"
+                  : "bg-gray-300 hover:bg-gray-400 text-gray-600"
+              }`}
+              title="Save"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17 21 17 13 7 13 7 21" />
+                <polyline points="7 3 7 8 15 8" />
+              </svg>
+            </button>
+            <button
+              onClick={onDuplicate}
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-colors p-2 cursor-pointer bg-gray-300 hover:bg-gray-400 text-gray-600"
+              title="Duplicate"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            </button>
+          </>
         )}
         {sketchName && <EditableName name={sketchName} onSave={onSaveName} />}
       </div>

@@ -1,8 +1,49 @@
-import {forwardRef} from "react";
+import {forwardRef, useState, useRef, useEffect} from "react";
 import {Sketch} from "./Sketch.jsx";
 import {clsx} from "../clsx.js";
 
-export const VersionItem = forwardRef(function VersionItem({version, isCurrent, width, onLoad, onDelete}, ref) {
+export const VersionItem = forwardRef(function VersionItem(
+  {version, isCurrent, width, onLoad, onDelete, onSaveName},
+  ref
+) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(version.name || "");
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleClick = (e) => {
+    // Don't trigger edit if clicking on delete button or sketch
+    if (e.target.closest("button") || e.target.closest(".sketch-container")) {
+      return;
+    }
+    setIsEditing(true);
+    setEditValue(version.name || "");
+  };
+
+  const handleSave = () => {
+    const trimmedValue = editValue.trim();
+    onSaveName?.(version.id, trimmedValue || null);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === "Escape") {
+      setIsEditing(false);
+      setEditValue(version.name || "");
+    }
+  };
+
+  const displayText = version.name || version.time;
+
   return (
     <div
       ref={ref}
@@ -14,12 +55,23 @@ export const VersionItem = forwardRef(function VersionItem({version, isCurrent, 
       )}
       title={version.code.substring(0, 50) + "..."}
     >
-      <div onClick={() => onLoad(version)} className="w-full relative">
+      <div onClick={() => onLoad(version)} className="w-full relative sketch-container">
         <Sketch code={version.code} width={width} />
-        {version.name && (
-          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs px-2 py-1">
-            {version.name}
-          </div>
+      </div>
+      <div className="px-2 py-1 text-xs text-gray-500 cursor-text hover:bg-gray-100 rounded" onClick={handleClick}>
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={handleKeyDown}
+            className="w-full bg-white border border-blue-500 rounded px-1 py-0.5 text-xs"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          displayText
         )}
       </div>
       <button
