@@ -180,6 +180,9 @@ export function Whiteboard({versions, onClose}) {
       >
         Close Whiteboard
       </button>
+      <div className="absolute bottom-4 right-4 z-10 px-3 py-2 bg-white border border-gray-300 rounded shadow-sm text-sm font-mono text-gray-700 pointer-events-auto">
+        scale: {transform.k.toFixed(2)}, translate: ({transform.x.toFixed(0)}, {transform.y.toFixed(0)})
+      </div>
 
       {/* Hidden sketches for dimension measurement */}
       <div className="absolute opacity-0 pointer-events-none" style={{left: "-9999px", top: "-9999px"}}>
