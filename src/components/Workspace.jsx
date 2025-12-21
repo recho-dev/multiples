@@ -585,6 +585,16 @@ export function Workspace({
   const handleLoadVersion = useCallback(
     async (version) => {
       if (editorInstanceRef.current && sketchId) {
+        // Warn if there are unsaved changes
+        if (hasNewCodeToSave) {
+          const confirmed = window.confirm(
+            "You have unsaved changes (code or params). Loading a different version will discard your changes. Are you sure you want to continue?"
+          );
+          if (!confirmed) {
+            return;
+          }
+        }
+
         editorInstanceRef.current.setCode(version.code);
         setCode(version.code);
         setHasNewCodeToRun(false);
@@ -611,7 +621,7 @@ export function Workspace({
         }
       }
     },
-    [sketchId, isExample]
+    [sketchId, isExample, hasNewCodeToSave]
   );
 
   const handleDeleteVersion = useCallback(
@@ -714,11 +724,21 @@ export function Workspace({
   }, []);
 
   const handleSelectVersionFromWhiteboard = useCallback((version) => {
+    // Warn if there are unsaved changes
+    if (hasNewCodeToSave) {
+      const confirmed = window.confirm(
+        "You have unsaved changes (code or params). Loading a different version will discard your changes. Are you sure you want to continue?"
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
     // Store the version to load after editor reinitializes
     pendingVersionToLoadRef.current = version;
     // Close whiteboard to reinitialize editor
     setShowWhiteboard(false);
-  }, []);
+  }, [hasNewCodeToSave]);
 
   if (showWhiteboard) {
     return (
