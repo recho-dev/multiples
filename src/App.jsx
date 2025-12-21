@@ -7,43 +7,13 @@ import {Workspace} from "./components/Workspace.jsx";
 import {OpenSketchModal} from "./components/OpenSketchModal.jsx";
 import {ExamplesModal} from "./components/ExamplesModal.jsx";
 
-// const initialCode = `p.setup = () => {
-//   p.createCanvas(400, 400);
-// };
-
-// p.draw = () => {
-//   p.background(220);
-// };
-// `;
-
 const initialCodeP5 = `p.setup = () => {
-  p.createCanvas(200, 200);
-  p.background(0, 0, 0);
-  p.translate(p.width / 2, p.height);
-  branch(60, 1, 0);
+  p.createCanvas(400, 400);
 };
 
-function branch(len, strokeWeight, rotate) {
-  if (len < 10) {
-    p.fill(255, 255, 255);
-    p.circle(0, 0, 5);
-    return;
-  }
-  p.push();
-  p.rotate(rotate);
-  p.stroke(255, 255, 255);
-  p.strokeWeight(strokeWeight);
-  p.line(0, -len, 0, 0);
-  p.translate(0, -len);
-  len = len * safe(0.66);
-  strokeWeight = strokeWeight * safe(0.66);
-  branch(len, strokeWeight, -Math.PI / 6);
-  branch(len, strokeWeight, Math.PI / 6);
-  p.pop();
-}
-
-function safe(value) {
-  return p.constrain(value, 0.3, 0.9);
+p.draw = () => {
+  p.background(220);
+  p.circle(p.width / 2, p.height / 2, 100);
 }
 `;
 
@@ -54,18 +24,9 @@ in  vec3 vPos;
 out vec4 fragColor;
 
 void main() {
-   vec4 F = vec4(.0);
-   float x = vPos.x * 2.;
-   float y = vPos.y * 2.;
-   float z = sqrt(1. - x*x - y*y);
-   if(z > 0.) {
-     float c = .1 + .5 * max(0., x+y+z);
-     float a = noise(10. * vec3(x, y, z) - vec3(uTime,0., 0.));
-     float t = .5 + sin(a * 20.) * .5;
-     c *=t;
-     F = vec4(c,c,c,1.);
-   }
-   fragColor = vec4(sqrt(F.rgb), F.a);
+   vec3 color = .5 - .5 * vPos;
+   color += .3 * sin(uTime + vPos * 2.);
+   fragColor = vec4(color, 1.);
 }`;
 
 function SketchEditor() {
