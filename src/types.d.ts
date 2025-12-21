@@ -29,6 +29,8 @@ export interface Sketch {
   id: string;
   /** Friendly name for the sketch (generated or user-provided) */
   name: string;
+  /** Type of sketch: "p5" for p5.js or "webgl2" for WebGL2 shader (defaults to "p5" if not specified) */
+  type?: "p5" | "webgl2";
   /** ISO timestamp when the sketch was created */
   timestamp: string;
   /** Array of all versions in this sketch */
@@ -45,4 +47,3 @@ export interface Sketch {
 export interface Metadata {
   [key: string]: any;
 }
-

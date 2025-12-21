@@ -23,26 +23,33 @@ const eslintConfig = {
 
 function createEditor(
   parent,
-  {initialCode = "", onSave = () => {}, onSliderChange = () => {}, onParamsChange = () => {}} = {}
+  {initialCode = "", sketchType = "p5", onSave = () => {}, onSliderChange = () => {}, onParamsChange = () => {}} = {}
 ) {
+  // Only enable JavaScript language support and linter for p5 mode
+  const extensions = [
+    basicSetup,
+    numberSlider(onParamsChange),
+    numberHighlight(),
+    keymap.of([
+      {
+        key: "Mod-s",
+        run: handleSave,
+        preventDefault: true,
+      },
+      indentWithTab,
+    ]),
+    EditorView.updateListener.of(handleSliderChange),
+  ];
+
+  // Add JavaScript language support and linter only for p5 mode
+  if (sketchType === "p5") {
+    extensions.push(javascript());
+    extensions.push(linter(esLint(new eslint.Linter(), eslintConfig)));
+  }
+
   const editor = new EditorView({
     parent,
-    extensions: [
-      basicSetup,
-      javascript(),
-      numberSlider(onParamsChange),
-      numberHighlight(),
-      keymap.of([
-        {
-          key: "Mod-s",
-          run: handleSave,
-          preventDefault: true,
-        },
-        indentWithTab,
-      ]),
-      EditorView.updateListener.of(handleSliderChange),
-      linter(esLint(new eslint.Linter(), eslintConfig)),
-    ],
+    extensions,
     doc: initialCode,
   });
 
