@@ -58,7 +58,7 @@ export const VersionItem = forwardRef(function VersionItem(
       <div onClick={() => onLoad(version)} className="w-full relative sketch-container">
         <Sketch code={version.code} width={width} />
       </div>
-      <div className="px-2 py-1 text-xs text-gray-500 cursor-text hover:bg-gray-100 rounded" onClick={handleClick}>
+      <div className="px-2 py-1 text-xs text-gray-500 cursor-text hover:bg-gray-100 rounded text-center" onClick={handleClick}>
         {isEditing ? (
           <input
             ref={inputRef}
