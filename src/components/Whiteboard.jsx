@@ -202,6 +202,23 @@ export function Whiteboard({versions, onClose}) {
           height: "100%",
         }}
       >
+        {/* Grid background that scales with zoom - covers large area to remain visible when zoomed out */}
+        <div
+          className="absolute"
+          style={{
+            backgroundColor: "#f9fafb",
+            backgroundImage: `
+              linear-gradient(to right, #e5e7eb ${Math.max(1, 1 / transform.k)}px, transparent ${Math.max(1, 1 / transform.k)}px),
+              linear-gradient(to bottom, #e5e7eb ${Math.max(1, 1 / transform.k)}px, transparent ${Math.max(1, 1 / transform.k)}px)
+            `,
+            backgroundSize: "200px 200px",
+            pointerEvents: "none",
+            left: "-50000px",
+            top: "-50000px",
+            width: "100000px",
+            height: "100000px",
+          }}
+        />
         {positionedVersions.map((node) => (
           <div
             key={node.id}
