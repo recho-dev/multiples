@@ -112,6 +112,7 @@ export function Workspace({
   const pendingVersionToLoadRef = useRef(null);
   const loadedParamsForVersionRef = useRef(null);
   const isSelectingFromMultiplesRef = useRef(false);
+  const isSwitchingContextRef = useRef(false);
 
   // Update local state when props change
   useEffect(() => {
@@ -134,6 +135,31 @@ export function Workspace({
       editorInstanceRef.current.setCode(providedInitialCode);
     }
   }, [providedInitialCode]);
+
+  // Clear params when switching sketches or examples
+  useEffect(() => {
+    // Reset the loaded params ref when sketchId or isExample changes
+    // This ensures params are properly loaded/cleared when switching contexts
+    loadedParamsForVersionRef.current = null;
+
+    // Set flag to ignore stale params updates from editor during context switch
+    isSwitchingContextRef.current = true;
+
+    // Immediately clear params state to prevent stale params from showing
+    setParams([]);
+    setRanges({});
+    setShowMultiples(false);
+
+    // Clear editor params if editor is initialized
+    if (editorInstanceRef.current) {
+      editorInstanceRef.current.setParams([]);
+    }
+
+    // Reset flag after a short delay to allow editor updates to complete
+    setTimeout(() => {
+      isSwitchingContextRef.current = false;
+    }, 100);
+  }, [sketchId, isExample]);
 
   // Load split sizes on mount
   useEffect(() => {
@@ -180,6 +206,11 @@ export function Workspace({
   }, []);
 
   const onParamsChange = useCallback(({params, type}) => {
+    // Ignore params updates during context switching to prevent stale params from showing
+    if (isSwitchingContextRef.current) {
+      return;
+    }
+
     setParams(params);
     if (type === "params-update" && !isSelectingFromMultiplesRef.current) {
       setShowMultiples(params.length > 0);
@@ -331,30 +362,38 @@ export function Workspace({
 
   // Load params from current version when editor is ready and version data is available
   useEffect(() => {
-    if (
-      editorInstanceRef.current &&
-      !showWhiteboard &&
-      currentVersionId &&
-      savedVersions.length > 0 &&
-      loadedParamsForVersionRef.current !== currentVersionId
-    ) {
-      const version = savedVersions.find((v) => v.id === currentVersionId);
-      if (version && version.params && version.params.definitions && version.params.definitions.length > 0) {
-        editorInstanceRef.current.setParams(version.params.definitions);
-        setParams(version.params.definitions);
-        setRanges(version.params.ranges || {});
-        setShowMultiples(true);
-        loadedParamsForVersionRef.current = currentVersionId;
+    if (editorInstanceRef.current && !showWhiteboard) {
+      if (currentVersionId && savedVersions.length > 0) {
+        // We have a version, check if it has params
+        if (loadedParamsForVersionRef.current !== currentVersionId) {
+          const version = savedVersions.find((v) => v.id === currentVersionId);
+          if (version && version.params && version.params.definitions && version.params.definitions.length > 0) {
+            editorInstanceRef.current.setParams(version.params.definitions);
+            setParams(version.params.definitions);
+            setRanges(version.params.ranges || {});
+            setShowMultiples(true);
+            loadedParamsForVersionRef.current = currentVersionId;
+          } else {
+            // Clear params if version doesn't have them
+            editorInstanceRef.current.setParams([]);
+            setParams([]);
+            setRanges({});
+            setShowMultiples(false);
+            loadedParamsForVersionRef.current = currentVersionId;
+          }
+        }
       } else {
-        // Clear params if version doesn't have them
-        editorInstanceRef.current.setParams([]);
-        setParams([]);
-        setRanges({});
-        setShowMultiples(false);
-        loadedParamsForVersionRef.current = currentVersionId;
+        // No version selected, clear params
+        if (loadedParamsForVersionRef.current !== null) {
+          editorInstanceRef.current.setParams([]);
+          setParams([]);
+          setRanges({});
+          setShowMultiples(false);
+          loadedParamsForVersionRef.current = null;
+        }
       }
     }
-  }, [currentVersionId, savedVersions, showWhiteboard]);
+  }, [currentVersionId, savedVersions, showWhiteboard, sketchId, isExample]);
 
   // Track editor code changes and update button states
   useEffect(() => {
