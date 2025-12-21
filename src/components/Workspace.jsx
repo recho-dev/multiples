@@ -792,6 +792,8 @@ export function Workspace({
           sketchType={sketchType}
           onToggleMultiples={setShowMultiples}
           onSelect={onSelect}
+          sketchId={sketchId}
+          currentVersionId={currentVersionId}
         />
       </Split>
     </main>

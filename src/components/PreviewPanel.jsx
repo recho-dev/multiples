@@ -11,6 +11,8 @@ export function PreviewPanel({
   sketchType = "p5",
   onToggleMultiples,
   onSelect,
+  sketchId,
+  currentVersionId,
 }) {
   return (
     <div className="h-full flex flex-col ml-4 mt-2 pb-4">
@@ -39,6 +41,8 @@ export function PreviewPanel({
             onRangesChange={onRangesChange}
             sketchType={sketchType}
             onSelect={onSelect}
+            sketchId={sketchId}
+            currentVersionId={currentVersionId}
           />
         ) : (
           <Sketch code={code} sketchType={sketchType} />

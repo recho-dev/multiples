@@ -119,7 +119,16 @@ function generateCode(code, params, ranges, {count = 4} = {}) {
   return generateXd(code, params, ranges, {count});
 }
 
-export function Multiples({code, params, ranges: initialRanges = {}, onRangesChange, sketchType = "p5", onSelect}) {
+export function Multiples({
+  code,
+  params,
+  ranges: initialRanges = {},
+  onRangesChange,
+  sketchType = "p5",
+  onSelect,
+  sketchId,
+  currentVersionId,
+}) {
   const cols = 4;
   const skipNotificationRef = useRef(false);
   const prevInitialRangesRef = useRef(JSON.stringify(initialRanges));
@@ -249,7 +258,10 @@ export function Multiples({code, params, ranges: initialRanges = {}, onRangesCha
           const paramKey = getParamKey(param);
           const range = ranges[paramKey] || {start: "0", end: "100", count: "4", type: "Float"};
           return (
-            <div key={paramKey} className="flex items-center gap-4 text-xs">
+            <div
+              key={`${sketchId || "new"}-${currentVersionId || "none"}-${i}-${paramKey}`}
+              className="flex items-center gap-4 text-xs"
+            >
               <span className="w-8 mr-6">
                 X{i}={param.value}
               </span>
