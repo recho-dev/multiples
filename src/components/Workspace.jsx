@@ -483,7 +483,7 @@ export function Workspace({
       navigate(`/multiples/sketches/${currentSketchId}`);
     }
 
-    // Check if code or params have changed from the current version
+    // If there's a current version, update it
     if (currentVersionId) {
       const currentVersion = savedVersions.find((v) => v.id === currentVersionId);
       if (currentVersion) {
@@ -497,16 +497,42 @@ export function Workspace({
         if (!codeChanged && !paramsChanged) {
           return;
         }
-      }
-    } else {
-      // If no current version, check if we have any changes from initial state
-      const codeChanged = currentCode !== providedInitialCode;
-      const hasParams = params.length > 0 || Object.keys(ranges).length > 0;
-      if (!codeChanged && !hasParams) {
+
+        // Update the existing version
+        try {
+          const updatedVersion = {
+            ...currentVersion,
+            code: currentCode,
+            timestamp: new Date().toISOString(),
+            time: new Date().toLocaleString(),
+            ...(params.length > 0
+              ? {
+                  params: {
+                    definitions: params,
+                    ranges,
+                  },
+                }
+              : {}),
+          };
+
+          await saveVersion(currentSketchId, updatedVersion);
+
+          const sketch = await getSketch(currentSketchId);
+          if (sketch) {
+            const updatedVersions = sketch.versions || [];
+            setSavedVersions(updatedVersions);
+            onVersionsChange?.(updatedVersions);
+            setHasNewCodeToSave(false);
+          }
+        } catch (error) {
+          console.error("Failed to save version:", error);
+          alert("Failed to save version. Please try again.");
+        }
         return;
       }
     }
 
+    // If no current version, create a new one
     try {
       let currentSketch = await getSketch(currentSketchId);
       if (!currentSketch) {
@@ -585,6 +611,92 @@ export function Workspace({
     navigate,
     onSketchIdChange,
     onSketchNameChange,
+    onVersionsChange,
+    params,
+    ranges,
+    sketchType,
+  ]);
+
+  const handleDuplicate = useCallback(async () => {
+    if (!editorInstanceRef.current) return;
+    if (isExample) return; // Don't duplicate examples
+
+    const currentCode = editorInstanceRef.current.getCode();
+    const currentSketchId = sketchId;
+
+    if (!currentSketchId) {
+      alert("Please save the sketch first before duplicating.");
+      return;
+    }
+
+    try {
+      let currentSketch = await getSketch(currentSketchId);
+      if (!currentSketch) {
+        alert("Sketch not found.");
+        return;
+      }
+
+      // Update sketch type if it changed
+      if (currentSketch.type !== sketchType) {
+        currentSketch.type = sketchType;
+        await saveSketch(currentSketch);
+      }
+
+      // Initialize nextVersionId if it doesn't exist
+      if (currentSketch.nextVersionId === undefined) {
+        const existingVersions = currentSketch.versions || [];
+        let maxVersionNum = -1;
+        for (const version of existingVersions) {
+          const versionNum = parseInt(version.id, 10);
+          if (!isNaN(versionNum) && versionNum > maxVersionNum) {
+            maxVersionNum = versionNum;
+          }
+        }
+        currentSketch.nextVersionId = maxVersionNum + 1;
+        await saveSketch(currentSketch);
+      }
+
+      const nextVersionId = String(currentSketch.nextVersionId);
+      currentSketch.nextVersionId = currentSketch.nextVersionId + 1;
+
+      const newVersion = {
+        id: nextVersionId,
+        parentId: currentVersionId,
+        code: currentCode,
+        timestamp: new Date().toISOString(),
+        time: new Date().toLocaleString(),
+        name: null,
+        ...(params.length > 0
+          ? {
+              params: {
+                definitions: params,
+                ranges,
+              },
+            }
+          : {}),
+      };
+
+      await saveSketch(currentSketch);
+      await saveVersion(currentSketchId, newVersion);
+
+      const sketch = await getSketch(currentSketchId);
+      if (sketch) {
+        const updatedVersions = sketch.versions || [];
+        setSavedVersions(updatedVersions);
+        onVersionsChange?.(updatedVersions);
+        setCurrentVersionId(newVersion.id);
+        setHasNewCodeToSave(false);
+        loadedParamsForVersionRef.current = newVersion.id;
+      }
+    } catch (error) {
+      console.error("Failed to duplicate version:", error);
+      alert("Failed to duplicate version. Please try again.");
+    }
+  }, [
+    sketchId,
+    currentVersionId,
+    savedVersions,
+    isExample,
     onVersionsChange,
     params,
     ranges,
@@ -788,6 +900,7 @@ export function Workspace({
           editorRef={editorRef}
           onRun={handleRun}
           onSave={handleSave}
+          onDuplicate={handleDuplicate}
           onFork={handleFork}
           sketchName={sketchName}
           onSaveName={handleSaveName}
