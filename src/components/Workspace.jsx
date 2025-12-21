@@ -205,10 +205,16 @@ export function Workspace({
     setCode(code);
   }, []);
 
-  const onParamsChange = useCallback(({params, type}) => {
+  const onParamsChange = useCallback(({params, code, type}) => {
     // Ignore params updates during context switching to prevent stale params from showing
     if (isSwitchingContextRef.current) {
       return;
+    }
+
+    // When positions are updated due to code edits, also update the code state
+    // to keep code and params in sync
+    if (type === "position-update" && code !== undefined) {
+      setCode(code);
     }
 
     setParams(params);
