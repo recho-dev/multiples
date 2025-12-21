@@ -57,6 +57,7 @@ export function Whiteboard({versions, onClose}) {
     initialNodeY: 0,
   });
   const [isModifierPressed, setIsModifierPressed] = useState(false);
+  const [hoveredSketchId, setHoveredSketchId] = useState(null);
 
   const calculateLayout = useCallback(() => {
     if (versions.length === 0 || !containerRef.current) return;
@@ -209,6 +210,10 @@ export function Whiteboard({versions, onClose}) {
     const handleKeyUp = (e) => {
       if (!e.metaKey && !e.ctrlKey) {
         setIsModifierPressed(false);
+        // Clear hover state when modifier is released (unless actively dragging)
+        if (!dragStateRef.current.isDragging) {
+          setHoveredSketchId(null);
+        }
       }
     };
 
@@ -229,6 +234,9 @@ export function Whiteboard({versions, onClose}) {
     }
     e.stopPropagation();
     e.preventDefault();
+
+    // Keep the blue border by maintaining hover state
+    setHoveredSketchId(nodeId);
 
     dragStateRef.current = {
       isDragging: true,
@@ -270,7 +278,13 @@ export function Whiteboard({versions, onClose}) {
 
     const handleMouseUp = () => {
       const wasDragging = dragStateRef.current.isDragging;
+      const draggedNodeId = dragStateRef.current.nodeId;
       dragStateRef.current.isDragging = false;
+
+      // Remove border when drag ends
+      if (wasDragging && draggedNodeId) {
+        setHoveredSketchId(null);
+      }
 
       // Restore the current transform to d3-zoom to prevent jumps
       if (wasDragging && zoomRef.current && containerRef.current) {
@@ -341,28 +355,47 @@ export function Whiteboard({versions, onClose}) {
             height: "100000px",
           }}
         />
-        {positionedVersions.map((node) => (
-          <div
-            key={node.id}
-            data-sketch-container
-            className="absolute border border-gray-200 bg-white shadow-sm"
-            style={{
-              left: `${node.x}px`,
-              top: `${node.y}px`,
-              width: `${node.data.width}px`,
-              height: `${node.data.height}px`,
-              cursor:
-                dragStateRef.current.isDragging && dragStateRef.current.nodeId === node.id
-                  ? "grabbing"
-                  : isModifierPressed
-                    ? "grab"
-                    : "move",
-            }}
-            onMouseDown={(e) => handleMouseDown(e, node.id, node.x, node.y)}
-          >
-            <Sketch code={node.version.code} width={node.data.width} height={node.data.height} />
-          </div>
-        ))}
+        {positionedVersions.map((node) => {
+          const isDragging = dragStateRef.current.isDragging && dragStateRef.current.nodeId === node.id;
+          const isHoveredWithModifier = hoveredSketchId === node.id && isModifierPressed;
+          const shouldShowBlueOutline = isDragging || isHoveredWithModifier;
+
+          // Scale outline width with zoom level for better visibility
+          const baseOutlineWidth = shouldShowBlueOutline ? 4 : 0;
+          const scaledOutlineWidth = baseOutlineWidth / transform.k;
+          const outlineColor = "#3b82f6";
+
+          return (
+            <div
+              key={node.id}
+              data-sketch-container
+              className="absolute"
+              style={{
+                left: `${node.x}px`,
+                top: `${node.y}px`,
+                width: `${node.data.width + 40}px`,
+                height: `${node.data.height + 40}px`,
+                outline: shouldShowBlueOutline ? `${scaledOutlineWidth}px solid ${outlineColor}` : "none",
+                outlineOffset: shouldShowBlueOutline ? `${-scaledOutlineWidth}px` : "0",
+                cursor: isDragging ? "grabbing" : isModifierPressed ? "grab" : "move",
+                padding: "20px",
+              }}
+              onMouseDown={(e) => handleMouseDown(e, node.id, node.x, node.y)}
+              onMouseEnter={() => {
+                if (isModifierPressed) {
+                  setHoveredSketchId(node.id);
+                }
+              }}
+              onMouseLeave={() => {
+                if (!isDragging) {
+                  setHoveredSketchId(null);
+                }
+              }}
+            >
+              <Sketch code={node.version.code} width={node.data.width} height={node.data.height} />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
