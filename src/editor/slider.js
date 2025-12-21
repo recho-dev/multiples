@@ -2,6 +2,7 @@ import {EditorView, ViewPlugin} from "@codemirror/view";
 import {Annotation, Facet, StateField, StateEffect} from "@codemirror/state";
 import {createRuler} from "./ruler.js";
 import {html} from "htl";
+import {getNumberRegex} from "./regex.js";
 
 // Define a annotation to label the slider change transaction.
 export const ANNO_SLIDER_UPDATE = Annotation.define();
@@ -34,15 +35,15 @@ function findNumberAt(view, pos) {
   const text = line.text;
   const offset = pos - line.from;
   let match;
-  const numberRegex = /-?\d+\.?\d*/g;
+  const numberRegex = getNumberRegex("g");
   while ((match = numberRegex.exec(text)) !== null) {
     const start = match.index;
-    const end = start + match[0].length;
+    const end = start + match[1].length;
     if (offset >= start && offset <= end) {
       return {
         from: line.from + start,
         to: line.from + end,
-        value: match[0],
+        value: match[1],
       };
     }
   }
@@ -111,9 +112,8 @@ const numberSliderPlugin = ViewPlugin.fromClass(
         // Get the text at the new position.
         const text = update.state.doc.sliceString(newFrom, newTo);
 
-        const numberRegex = /-?\d+\.?\d*/g;
-
-        // Check if it's still a valid number.
+        // Check if it's still a valid number (not part of an identifier).
+        const numberRegex = getNumberRegex();
         if (numberRegex.test(text)) newParams.push({from: newFrom, to: newTo, value: text});
 
         // Otherwise, the param was deleted or modified, so  skip it

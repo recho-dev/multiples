@@ -1,5 +1,6 @@
 import {Decoration, ViewPlugin, EditorView} from "@codemirror/view";
 import {paramsStateField} from "./slider.js";
+import {getNumberRegex} from "./regex.js";
 
 const numberDeco = Decoration.mark({class: "cm-number"});
 const selectedNumberDeco = Decoration.mark({class: "cm-number cm-number-selected"});
@@ -23,7 +24,7 @@ const numberHighlightPlugin = ViewPlugin.fromClass(
     buildDeco(view) {
       const ranges = [];
       const params = view.state.field(paramsStateField, false) || [];
-      const numberRegex = /-?\d+\.?\d*/g;
+      const numberRegex = getNumberRegex("g");
 
       // Create a set of param positions for quick lookup
       const paramPositions = new Set();
@@ -37,7 +38,7 @@ const numberHighlightPlugin = ViewPlugin.fromClass(
         let m;
         while ((m = numberRegex.exec(text))) {
           const start = from + m.index;
-          const end = start + m[0].length;
+          const end = start + m[1].length;
           const isSelected = paramPositions.has(`${start}-${end}`);
           ranges.push((isSelected ? selectedNumberDeco : numberDeco).range(start, end));
         }
