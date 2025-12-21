@@ -2,7 +2,7 @@ import {javascript, esLint} from "@codemirror/lang-javascript";
 import {EditorView, basicSetup} from "codemirror";
 import {indentWithTab} from "@codemirror/commands";
 import {keymap} from "@codemirror/view";
-import {numberSlider, ANNO_SLIDER_UPDATE} from "./slider.js";
+import {numberSlider, ANNO_SLIDER_UPDATE, setParamsEffect, paramsStateField} from "./slider.js";
 import {numberHighlight} from "./number.js";
 import * as d3 from "d3";
 import {linter} from "@codemirror/lint";
@@ -81,12 +81,19 @@ function createEditor(
     });
   }
 
+  function setParams(newParams) {
+    editor.dispatch({
+      effects: setParamsEffect.of(newParams),
+    });
+  }
+
   return {
     editor,
     destroy: () => editor.destroy(),
     update: handleUpdate,
     getCode: () => editor.state.doc.toString(),
     setCode,
+    setParams,
   };
 }
 

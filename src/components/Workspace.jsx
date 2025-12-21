@@ -16,15 +16,6 @@ import {EditorPanel} from "./EditorPanel.jsx";
 import {PreviewPanel} from "./PreviewPanel.jsx";
 import {Whiteboard} from "./Whiteboard.jsx";
 
-const initialCode = `p.setup = () => {
-  p.createCanvas(400, 400);
-};
-
-p.draw = () => {
-  p.background(220);
-};
-`;
-
 const SPLIT_SIZES_KEY = "recho-multiples-split-sizes";
 
 function uid() {
@@ -38,12 +29,40 @@ function generateFriendlyName() {
   return `${predicate}-${object}-${num}`;
 }
 
+function getParamKey(param) {
+  return `${param.from}-${param.to}`;
+}
+
+function getDefaultRange(value, defaultCount = 4) {
+  value = parseFloat(value);
+  let [min, max] = [value * 0.5, value * 2];
+  if (value === 0) [min, max] = [0, 100];
+  if (min > max) [min, max] = [max, min];
+  return {min, max, count: defaultCount};
+}
+
+function paramsEqual(params1, ranges1, params2, ranges2) {
+  if (!params1 && !params2) return true;
+  if (!params1 || !params2) return false;
+
+  // Compare params arrays
+  if (params1.length !== params2.length) return false;
+  const params1Str = JSON.stringify(params1.sort((a, b) => a.from - b.from));
+  const params2Str = JSON.stringify(params2.sort((a, b) => a.from - b.from));
+  if (params1Str !== params2Str) return false;
+
+  // Compare ranges objects
+  const ranges1Str = JSON.stringify(ranges1 || {});
+  const ranges2Str = JSON.stringify(ranges2 || {});
+  return ranges1Str === ranges2Str;
+}
+
 export function Workspace({
   sketchId,
   sketchName,
   versions: initialVersions = [],
   currentVersionId: initialVersionId = null,
-  initialCode: providedInitialCode = initialCode,
+  initialCode: providedInitialCode,
   sketchType: providedSketchType = "p5",
   isExample = false,
   onSketchIdChange,
@@ -79,6 +98,7 @@ export function Workspace({
   const [hasNewCodeToRun, setHasNewCodeToRun] = useState(false);
   const [hasNewCodeToSave, setHasNewCodeToSave] = useState(false);
   const [params, setParams] = useState([]);
+  const [ranges, setRanges] = useState({});
   const [showMultiples, setShowMultiples] = useState(false);
   const [savedVersions, setSavedVersions] = useState(initialVersions);
   const [currentVersionId, setCurrentVersionId] = useState(initialVersionId);
@@ -90,6 +110,7 @@ export function Workspace({
   const editorInstanceRef = useRef(null);
   const editorInitializedRef = useRef(false);
   const pendingVersionToLoadRef = useRef(null);
+  const loadedParamsForVersionRef = useRef(null);
 
   // Update local state when props change
   useEffect(() => {
@@ -160,6 +181,30 @@ export function Workspace({
   const onParamsChange = useCallback(({params, type}) => {
     setParams(params);
     if (type === "params-update") setShowMultiples(params.length > 0);
+
+    // Update ranges when params change - initialize missing ranges with defaults
+    setRanges((prevRanges) => {
+      const newRanges = {...prevRanges};
+      params.forEach((param) => {
+        const key = getParamKey(param);
+        if (!newRanges[key]) {
+          const defaultRange = getDefaultRange(param.value, 4);
+          newRanges[key] = {
+            start: defaultRange.min.toFixed(2),
+            end: defaultRange.max.toFixed(2),
+            count: defaultRange.count.toString(),
+            type: "Float",
+          };
+        }
+      });
+      // Remove ranges for params that no longer exist
+      Object.keys(newRanges).forEach((key) => {
+        if (!params.some((p) => getParamKey(p) === key)) {
+          delete newRanges[key];
+        }
+      });
+      return newRanges;
+    });
   }, []);
 
   const onSelect = useCallback(
@@ -207,12 +252,63 @@ export function Workspace({
       setHasNewCodeToRun(false);
       setHasNewCodeToSave(false);
       setCurrentVersionId(version.id);
+
+      // Restore params and ranges if the version has them
+      if (version.params && version.params.definitions && version.params.definitions.length > 0) {
+        // Use setTimeout to ensure the editor is fully initialized
+        setTimeout(() => {
+          if (editorInstanceRef.current) {
+            editorInstanceRef.current.setParams(version.params.definitions);
+          }
+        }, 0);
+        setParams(version.params.definitions);
+        setRanges(version.params.ranges || {});
+        setShowMultiples(true);
+      } else {
+        // Clear params in editor and state when version has no params
+        setTimeout(() => {
+          if (editorInstanceRef.current) {
+            editorInstanceRef.current.setParams([]);
+          }
+        }, 0);
+        setParams([]);
+        setRanges({});
+        setShowMultiples(false);
+      }
+      loadedParamsForVersionRef.current = version.id;
+
       if (!isExample && sketchId) {
         setSelectedVersion(sketchId, version.id).catch((err) => {
           console.error("Failed to set selected version:", err);
         });
       }
       pendingVersionToLoadRef.current = null;
+    } else if (currentVersionId && savedVersions.length > 0) {
+      // Load params from current version if editor was just initialized
+      const version = savedVersions.find((v) => v.id === currentVersionId);
+      if (version && version.params && version.params.definitions && version.params.definitions.length > 0) {
+        // Use setTimeout to ensure the editor is fully initialized
+        setTimeout(() => {
+          if (editorInstanceRef.current) {
+            editorInstanceRef.current.setParams(version.params.definitions);
+          }
+        }, 0);
+        setParams(version.params.definitions);
+        setRanges(version.params.ranges || {});
+        setShowMultiples(true);
+        loadedParamsForVersionRef.current = currentVersionId;
+      } else {
+        // Clear params if version doesn't have them
+        setTimeout(() => {
+          if (editorInstanceRef.current) {
+            editorInstanceRef.current.setParams([]);
+          }
+        }, 0);
+        setParams([]);
+        setRanges({});
+        setShowMultiples(false);
+        loadedParamsForVersionRef.current = currentVersionId;
+      }
     }
 
     return () => {
@@ -222,7 +318,34 @@ export function Workspace({
         editorInitializedRef.current = false;
       }
     };
-  }, [showWhiteboard, sketchType, onSave, onSliderChange, onParamsChange, isExample]);
+  }, [showWhiteboard, sketchType, onSave, onSliderChange, onParamsChange, providedInitialCode, isExample]);
+
+  // Load params from current version when editor is ready and version data is available
+  useEffect(() => {
+    if (
+      editorInstanceRef.current &&
+      !showWhiteboard &&
+      currentVersionId &&
+      savedVersions.length > 0 &&
+      loadedParamsForVersionRef.current !== currentVersionId
+    ) {
+      const version = savedVersions.find((v) => v.id === currentVersionId);
+      if (version && version.params && version.params.definitions && version.params.definitions.length > 0) {
+        editorInstanceRef.current.setParams(version.params.definitions);
+        setParams(version.params.definitions);
+        setRanges(version.params.ranges || {});
+        setShowMultiples(true);
+        loadedParamsForVersionRef.current = currentVersionId;
+      } else {
+        // Clear params if version doesn't have them
+        editorInstanceRef.current.setParams([]);
+        setParams([]);
+        setRanges({});
+        setShowMultiples(false);
+        loadedParamsForVersionRef.current = currentVersionId;
+      }
+    }
+  }, [currentVersionId, savedVersions, showWhiteboard]);
 
   // Track editor code changes and update button states
   useEffect(() => {
@@ -236,17 +359,28 @@ export function Workspace({
       const needsRun = currentEditorCode !== code;
       setHasNewCodeToRun(needsRun);
 
-      // Check if there's new code to save
+      // Check if there's new code or params to save
       let needsSave = false;
       if (currentVersionId) {
         const currentVersion = savedVersions.find((v) => v.id === currentVersionId);
         if (currentVersion) {
-          needsSave = currentVersion.code !== currentEditorCode;
+          const codeChanged = currentVersion.code !== currentEditorCode;
+          const paramsChanged = !paramsEqual(
+            params,
+            ranges,
+            currentVersion.params?.definitions || [],
+            currentVersion.params?.ranges || {}
+          );
+          needsSave = codeChanged || paramsChanged;
         } else {
-          needsSave = currentEditorCode !== initialCode;
+          const codeChanged = currentEditorCode !== providedInitialCode;
+          const paramsChanged = params.length > 0 || Object.keys(ranges).length > 0;
+          needsSave = codeChanged || paramsChanged;
         }
       } else {
-        needsSave = currentEditorCode !== initialCode;
+        const codeChanged = currentEditorCode !== providedInitialCode;
+        const paramsChanged = params.length > 0 || Object.keys(ranges).length > 0;
+        needsSave = codeChanged || paramsChanged;
       }
       setHasNewCodeToSave(needsSave);
     };
@@ -255,7 +389,7 @@ export function Workspace({
     const interval = setInterval(checkEditorChanges, 500);
 
     return () => clearInterval(interval);
-  }, [code, currentVersionId, savedVersions, showWhiteboard]);
+  }, [code, currentVersionId, savedVersions, showWhiteboard, params, ranges, providedInitialCode]);
 
   const handleRun = useCallback(() => {
     if (editorInstanceRef.current) {
@@ -280,6 +414,7 @@ export function Workspace({
         timestamp: version.timestamp,
         time: version.time,
         name: version.name,
+        ...(version.params && {params: version.params}),
       }));
 
       // Determine the next version ID based on existing versions
@@ -339,10 +474,26 @@ export function Workspace({
       navigate(`/multiples/sketches/${currentSketchId}`);
     }
 
-    // Check if code has changed from the current version
+    // Check if code or params have changed from the current version
     if (currentVersionId) {
       const currentVersion = savedVersions.find((v) => v.id === currentVersionId);
-      if (currentVersion && currentVersion.code === currentCode) {
+      if (currentVersion) {
+        const codeChanged = currentVersion.code !== currentCode;
+        const paramsChanged = !paramsEqual(
+          params,
+          ranges,
+          currentVersion.params?.definitions || [],
+          currentVersion.params?.ranges || {}
+        );
+        if (!codeChanged && !paramsChanged) {
+          return;
+        }
+      }
+    } else {
+      // If no current version, check if we have any changes from initial state
+      const codeChanged = currentCode !== providedInitialCode;
+      const hasParams = params.length > 0 || Object.keys(ranges).length > 0;
+      if (!codeChanged && !hasParams) {
         return;
       }
     }
@@ -391,6 +542,14 @@ export function Workspace({
         timestamp: new Date().toISOString(),
         time: new Date().toLocaleString(),
         name: null,
+        ...(params.length > 0
+          ? {
+              params: {
+                definitions: params,
+                ranges,
+              },
+            }
+          : {}),
       };
 
       await saveSketch(currentSketch);
@@ -418,6 +577,9 @@ export function Workspace({
     onSketchIdChange,
     onSketchNameChange,
     onVersionsChange,
+    params,
+    ranges,
+    sketchType,
   ]);
 
   const handleLoadVersion = useCallback(
@@ -428,6 +590,22 @@ export function Workspace({
         setHasNewCodeToRun(false);
         setHasNewCodeToSave(false);
         setCurrentVersionId(version.id);
+
+        // Restore params and ranges if the version has them
+        if (version.params && version.params.definitions && version.params.definitions.length > 0) {
+          editorInstanceRef.current.setParams(version.params.definitions);
+          setParams(version.params.definitions);
+          setRanges(version.params.ranges || {});
+          setShowMultiples(true);
+        } else {
+          // Clear params in editor and state when version has no params
+          editorInstanceRef.current.setParams([]);
+          setParams([]);
+          setRanges({});
+          setShowMultiples(false);
+        }
+        loadedParamsForVersionRef.current = version.id;
+
         if (!isExample) {
           await setSelectedVersion(sketchId, version.id);
         }
@@ -589,6 +767,8 @@ export function Workspace({
           showMultiples={showMultiples}
           code={code}
           params={params}
+          ranges={ranges}
+          onRangesChange={setRanges}
           sketchType={sketchType}
           onToggleMultiples={setShowMultiples}
           onSelect={onSelect}
