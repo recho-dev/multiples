@@ -72,7 +72,7 @@ export const HistoryPanel = forwardRef(function HistoryPanel(
           <p className="text-xs text-gray-500">No saved versions yet</p>
         ) : (
           <div className="space-y-3">
-            {versions.map((version) => (
+            {[...versions].reverse().map((version) => (
               <VersionItem
                 key={version.id}
                 ref={(node) => {
