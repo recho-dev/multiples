@@ -2,7 +2,7 @@ import {forwardRef, useEffect, useRef} from "react";
 import {VersionItem} from "./VersionItem.jsx";
 
 export const HistoryPanel = forwardRef(function HistoryPanel(
-  {versions, currentVersionId, sidebarWidth, onLoadVersion, onDeleteVersion, onWhiteboardClick},
+  {versions, currentVersionId, sidebarWidth, onLoadVersion, onDeleteVersion, onSaveVersionName, onWhiteboardClick},
   ref
 ) {
   const versionItemRefs = useRef({});
@@ -83,6 +83,7 @@ export const HistoryPanel = forwardRef(function HistoryPanel(
                 width={sidebarWidth}
                 onLoad={onLoadVersion}
                 onDelete={onDeleteVersion}
+                onSaveName={onSaveVersionName}
               />
             ))}
           </div>

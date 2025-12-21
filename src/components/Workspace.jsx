@@ -786,6 +786,35 @@ export function Workspace({
     [sketchId, currentVersionId, isExample, onVersionsChange]
   );
 
+  const handleSaveVersionName = useCallback(
+    async (versionId, newName) => {
+      if (!sketchId || isExample) return;
+
+      try {
+        const version = savedVersions.find((v) => v.id === versionId);
+        if (!version) return;
+
+        const updatedVersion = {
+          ...version,
+          name: newName,
+        };
+
+        await saveVersion(sketchId, updatedVersion);
+
+        const sketch = await getSketch(sketchId);
+        if (sketch) {
+          const updatedVersions = sketch.versions || [];
+          setSavedVersions(updatedVersions);
+          onVersionsChange?.(updatedVersions);
+        }
+      } catch (error) {
+        console.error("Failed to save version name:", error);
+        alert("Failed to save version name. Please try again.");
+      }
+    },
+    [sketchId, savedVersions, isExample, onVersionsChange]
+  );
+
   const handleSplitChange = useCallback(async (sizes) => {
     setSplitSizes(sizes);
     try {
@@ -885,6 +914,7 @@ export function Workspace({
           sidebarWidth={sidebarWidth}
           onLoadVersion={handleLoadVersion}
           onDeleteVersion={handleDeleteVersion}
+          onSaveVersionName={handleSaveVersionName}
           onWhiteboardClick={handleWhiteboardClick}
         />
         <EditorPanel
