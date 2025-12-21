@@ -1,0 +1,116 @@
+{
+  "id": "3ah1sffqys4d1isp4ox034",
+  "name": "Fractal Tree",
+  "timestamp": "2025-12-21T16:27:03.697Z",
+  "versions": [
+    {
+      "id": "4",
+      "parentId": "2",
+      "timestamp": "2025-12-21T15:48:06.818Z",
+      "time": "12/21/2025, 10:48:06 AM",
+      "name": "Branch and Length",
+      "code": "p.setup = () => {\n  p.createCanvas(200, 200);\n  p.background(0, 0, 0);\n  p.translate(p.width / 2, p.height);\n  branch(60, 1, 0);\n};\n\nfunction branch(len, strokeWeight, rotate) {\n  if (len < 10) {\n    p.fill(255, 255, 255);\n    p.circle(0, 0, 5);\n    return;\n  }\n  p.push();\n  p.rotate(rotate);\n  p.stroke(255, 255, 255);\n  p.strokeWeight(strokeWeight);\n  p.line(0, -len, 0, 0);\n  p.translate(0, -len);\n  len = len * safe(0.66);\n  strokeWeight = strokeWeight * safe(0.66);\n  branch(len, strokeWeight, -Math.PI / 6);\n  branch(len, strokeWeight, Math.PI / 6);\n  p.pop();\n}\n\nfunction safe(value) {\n  return p.constrain(value, 0.3, 0.9);\n}",
+      "params": {
+        "definitions": [
+          {
+            "from": 118,
+            "to": 120,
+            "value": "60"
+          },
+          {
+            "from": 190,
+            "to": 192,
+            "value": "10"
+          }
+        ],
+        "ranges": {
+          "118-120": {
+            "start": "30.00",
+            "end": "60.00",
+            "count": "4",
+            "type": "Float"
+          },
+          "190-192": {
+            "start": "5.00",
+            "end": "20.00",
+            "count": "4",
+            "type": "Float"
+          }
+        }
+      }
+    },
+    {
+      "id": "3",
+      "parentId": "0",
+      "timestamp": "2025-12-21T16:25:38.096Z",
+      "time": "12/21/2025, 11:25:38 AM",
+      "name": "Angles",
+      "code": "p.setup = () => {\n  p.createCanvas(200, 200);\n  p.background(0, 0, 0);\n  p.translate(p.width / 2, p.height);\n  branch(60, 1, 0);\n};\n\nfunction branch(len, strokeWeight, rotate) {\n  if (len < 10) {\n    p.fill(255, 255, 255);\n    p.circle(0, 0, 5);\n    return;\n  }\n  p.push();\n  p.rotate(rotate);\n  p.stroke(255, 255, 255);\n  p.strokeWeight(strokeWeight);\n  p.line(0, -len, 0, 0);\n  p.translate(0, -len);\n  len = len * safe(0.66);\n  strokeWeight = strokeWeight * safe(0.66);\n  branch(len, strokeWeight, -Math.PI / 9.00);\n  branch(len, strokeWeight, Math.PI / 3.00);\n  p.pop();\n}\n\nfunction safe(value) {\n  return p.constrain(value, 0.3, 0.9);\n}",
+      "params": {
+        "definitions": [
+          {
+            "from": 511,
+            "to": 515,
+            "value": "9.00"
+          },
+          {
+            "from": 556,
+            "to": 560,
+            "value": "3.00"
+          }
+        ],
+        "ranges": {
+          "511-515": {
+            "start": "3",
+            "end": "12",
+            "count": "4",
+            "type": "Float"
+          },
+          "556-560": {
+            "start": "3",
+            "end": "12",
+            "count": "4",
+            "type": "Float"
+          }
+        }
+      }
+    },
+    {
+      "id": "0",
+      "parentId": null,
+      "timestamp": "2025-12-21T16:26:04.514Z",
+      "time": "12/21/2025, 11:26:04 AM",
+      "name": "Positions",
+      "code": "p.setup = () => {\n  p.createCanvas(200, 200);\n  p.background(0, 0, 0);\n  p.translate(p.width / 2, p.height);\n  branch(60, 1, 0);\n};\n\nfunction branch(len, strokeWeight, rotate) {\n  if (len < 10) {\n    p.fill(255, 255, 255);\n    p.circle(0, 66.67, 5);\n    return;\n  }\n  p.push();\n  p.rotate(rotate);\n  p.stroke(255, 255, 255);\n  p.strokeWeight(strokeWeight);\n  p.line(33.33, -len, 0, 0);\n  p.translate(0, -len);\n  len = len * safe(0.66);\n  strokeWeight = strokeWeight * safe(0.66);\n  branch(len, strokeWeight, -Math.PI / 6);\n  branch(len, strokeWeight, Math.PI / 6);\n  p.pop();\n}\n\nfunction safe(value) {\n  return p.constrain(value, 0.3, 0.9);\n}",
+      "params": {
+        "definitions": [
+          {
+            "from": 239,
+            "to": 244,
+            "value": "66.67"
+          },
+          {
+            "from": 366,
+            "to": 371,
+            "value": "33.33"
+          }
+        ],
+        "ranges": {
+          "239-244": {
+            "start": "0",
+            "end": "100",
+            "count": "4",
+            "type": "Float"
+          },
+          "366-371": {
+            "start": "0",
+            "end": "100",
+            "count": "4",
+            "type": "Float"
+          }
+        }
+      }
+    }
+  ],
+  "selectedVersion": "4"
+}
