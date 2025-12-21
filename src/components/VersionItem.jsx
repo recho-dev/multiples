@@ -22,6 +22,9 @@ export const VersionItem = forwardRef(function VersionItem({version, isCurrent, 
           </div>
         )}
       </div>
+      <div className="px-2 py-1 text-xs text-gray-500">
+        {version.time}
+      </div>
       <button
         onClick={(e) => onDelete(version.id, e)}
         className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1.5 bg-white hover:bg-red-100 rounded shadow-sm transition-opacity"

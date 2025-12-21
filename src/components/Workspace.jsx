@@ -692,16 +692,7 @@ export function Workspace({
       console.error("Failed to duplicate version:", error);
       alert("Failed to duplicate version. Please try again.");
     }
-  }, [
-    sketchId,
-    currentVersionId,
-    savedVersions,
-    isExample,
-    onVersionsChange,
-    params,
-    ranges,
-    sketchType,
-  ]);
+  }, [sketchId, currentVersionId, savedVersions, isExample, onVersionsChange, params, ranges, sketchType]);
 
   const handleLoadVersion = useCallback(
     async (version) => {
