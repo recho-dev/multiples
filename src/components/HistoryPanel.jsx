@@ -29,7 +29,7 @@ export const HistoryPanel = forwardRef(function HistoryPanel(
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="px-4 py-2 border-b border-gray-200 flex-shrink-0 flex items-center justify-between relative z-10 bg-white">
-        <span>History</span>
+        <span>Versions</span>
         {versions.length > 0 && (
           <button
             onClick={onWhiteboardClick}
