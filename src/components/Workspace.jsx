@@ -218,6 +218,54 @@ export function Workspace({
     }
   }, []);
 
+  const handleFork = useCallback(async () => {
+    if (!isExample) return;
+
+    try {
+      const newSketchId = uid();
+      const newSketchName = sketchName ? `Fork of ${sketchName}` : generateFriendlyName();
+
+      // Copy all versions from the example
+      const forkedVersions = savedVersions.map((version) => ({
+        id: version.id,
+        parentId: version.parentId,
+        code: version.code,
+        timestamp: version.timestamp,
+        time: version.time,
+        name: version.name,
+      }));
+
+      // Determine the next version ID based on existing versions
+      let maxVersionNum = -1;
+      for (const version of forkedVersions) {
+        const versionNum = parseInt(version.id, 10);
+        if (!isNaN(versionNum) && versionNum > maxVersionNum) {
+          maxVersionNum = versionNum;
+        }
+      }
+
+      // Create the new sketch with copied versions
+      const newSketch = {
+        id: newSketchId,
+        name: newSketchName,
+        timestamp: new Date().toISOString(),
+        versions: forkedVersions,
+        selectedVersion: currentVersionId || (forkedVersions.length > 0 ? forkedVersions[0].id : null),
+        nextVersionId: maxVersionNum + 1,
+      };
+
+      await saveSketch(newSketch);
+
+      // Update parent state and navigate to the new sketch
+      onSketchIdChange?.(newSketchId);
+      onSketchNameChange?.(newSketchName);
+      navigate(`/multiples/sketches/${newSketchId}`);
+    } catch (error) {
+      console.error("Failed to fork example:", error);
+      alert("Failed to fork example. Please try again.");
+    }
+  }, [isExample, sketchName, savedVersions, currentVersionId, navigate, onSketchIdChange, onSketchNameChange]);
+
   const handleSave = useCallback(async () => {
     if (!editorInstanceRef.current) return;
     if (isExample) return; // Don't save examples directly
@@ -446,10 +494,12 @@ export function Workspace({
           editorRef={editorRef}
           onRun={handleRun}
           onSave={handleSave}
+          onFork={handleFork}
           sketchName={sketchName}
           onSaveName={handleSaveName}
           hasNewCodeToRun={hasNewCodeToRun}
           hasNewCodeToSave={hasNewCodeToSave}
+          isExample={isExample}
         />
         <PreviewPanel
           showMultiples={showMultiples}
