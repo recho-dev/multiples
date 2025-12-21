@@ -111,6 +111,7 @@ export function Workspace({
   const editorInitializedRef = useRef(false);
   const pendingVersionToLoadRef = useRef(null);
   const loadedParamsForVersionRef = useRef(null);
+  const isSelectingFromMultiplesRef = useRef(false);
 
   // Update local state when props change
   useEffect(() => {
@@ -180,7 +181,9 @@ export function Workspace({
 
   const onParamsChange = useCallback(({params, type}) => {
     setParams(params);
-    if (type === "params-update") setShowMultiples(params.length > 0);
+    if (type === "params-update" && !isSelectingFromMultiplesRef.current) {
+      setShowMultiples(params.length > 0);
+    }
 
     // Update ranges when params change - initialize missing ranges with defaults
     setRanges((prevRanges) => {
@@ -210,9 +213,15 @@ export function Workspace({
   const onSelect = useCallback(
     ({code, values}) => {
       if (!editorInstanceRef.current || params.length === 0) return;
+      isSelectingFromMultiplesRef.current = true;
       editorInstanceRef.current.update(params, values);
       setCode(code);
+      setHasNewCodeToRun(false);
       setShowMultiples(false);
+      // Reset the flag after a short delay to allow any pending updates to complete
+      setTimeout(() => {
+        isSelectingFromMultiplesRef.current = false;
+      }, 100);
     },
     [params]
   );
@@ -723,22 +732,25 @@ export function Workspace({
     setShowWhiteboard(false);
   }, []);
 
-  const handleSelectVersionFromWhiteboard = useCallback((version) => {
-    // Warn if there are unsaved changes
-    if (hasNewCodeToSave) {
-      const confirmed = window.confirm(
-        "You have unsaved changes (code or params). Loading a different version will discard your changes. Are you sure you want to continue?"
-      );
-      if (!confirmed) {
-        return;
+  const handleSelectVersionFromWhiteboard = useCallback(
+    (version) => {
+      // Warn if there are unsaved changes
+      if (hasNewCodeToSave) {
+        const confirmed = window.confirm(
+          "You have unsaved changes (code or params). Loading a different version will discard your changes. Are you sure you want to continue?"
+        );
+        if (!confirmed) {
+          return;
+        }
       }
-    }
 
-    // Store the version to load after editor reinitializes
-    pendingVersionToLoadRef.current = version;
-    // Close whiteboard to reinitialize editor
-    setShowWhiteboard(false);
-  }, [hasNewCodeToSave]);
+      // Store the version to load after editor reinitializes
+      pendingVersionToLoadRef.current = version;
+      // Close whiteboard to reinitialize editor
+      setShowWhiteboard(false);
+    },
+    [hasNewCodeToSave]
+  );
 
   if (showWhiteboard) {
     return (
