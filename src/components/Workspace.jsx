@@ -179,10 +179,10 @@ export function Workspace({
 
     // Initialize editor when not showing whiteboard and editor ref is available
     if (!editorRef.current || editorInitializedRef.current) return;
-    
+
     // Use pending version code if available, otherwise use current code
     const codeToLoad = pendingVersionToLoadRef.current?.code || code;
-    
+
     editorInstanceRef.current = createEditor(editorRef.current, {
       initialCode: codeToLoad,
       onSave,
@@ -190,7 +190,7 @@ export function Workspace({
       onParamsChange,
     });
     editorInitializedRef.current = true;
-    
+
     // If there's a pending version to load, load it now
     if (pendingVersionToLoadRef.current) {
       const version = pendingVersionToLoadRef.current;
@@ -206,7 +206,7 @@ export function Workspace({
       }
       pendingVersionToLoadRef.current = null;
     }
-    
+
     return () => {
       if (editorInstanceRef.current) {
         editorInstanceRef.current.destroy();
@@ -518,15 +518,12 @@ export function Workspace({
     setShowWhiteboard(false);
   }, []);
 
-  const handleSelectVersionFromWhiteboard = useCallback(
-    (version) => {
-      // Store the version to load after editor reinitializes
-      pendingVersionToLoadRef.current = version;
-      // Close whiteboard to reinitialize editor
-      setShowWhiteboard(false);
-    },
-    []
-  );
+  const handleSelectVersionFromWhiteboard = useCallback((version) => {
+    // Store the version to load after editor reinitializes
+    pendingVersionToLoadRef.current = version;
+    // Close whiteboard to reinitialize editor
+    setShowWhiteboard(false);
+  }, []);
 
   if (showWhiteboard) {
     return (
