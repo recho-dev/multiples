@@ -14,6 +14,7 @@ import {
 import {HistoryPanel} from "./HistoryPanel.jsx";
 import {EditorPanel} from "./EditorPanel.jsx";
 import {PreviewPanel} from "./PreviewPanel.jsx";
+import {Whiteboard} from "./Whiteboard.jsx";
 
 const initialCode = `p.setup = () => {
   p.createCanvas(400, 400);
@@ -81,9 +82,11 @@ export function Workspace({
   const [currentVersionId, setCurrentVersionId] = useState(initialVersionId);
   const [sidebarWidth, setSidebarWidth] = useState(176);
   const [splitSizes, setSplitSizes] = useState([15, 35, 50]);
+  const [showWhiteboard, setShowWhiteboard] = useState(false);
   const sidebarRef = useRef(null);
   const editorRef = useRef(null);
   const editorInstanceRef = useRef(null);
+  const editorInitializedRef = useRef(false);
 
   // Update local state when props change
   useEffect(() => {
@@ -161,22 +164,37 @@ export function Workspace({
     [params]
   );
 
-  // Initialize editor
+  // Destroy editor when showing whiteboard, reinitialize when hiding whiteboard
   useEffect(() => {
-    if (!editorRef.current) return;
+    if (showWhiteboard) {
+      // Destroy editor when showing whiteboard
+      if (editorInstanceRef.current) {
+        editorInstanceRef.current.destroy();
+        editorInstanceRef.current = null;
+      }
+      editorInitializedRef.current = false;
+      return;
+    }
+
+    // Initialize editor when not showing whiteboard and editor ref is available
+    if (!editorRef.current || editorInitializedRef.current) return;
+    
     editorInstanceRef.current = createEditor(editorRef.current, {
       initialCode: code,
       onSave,
       onSliderChange,
       onParamsChange,
     });
+    editorInitializedRef.current = true;
+    
     return () => {
       if (editorInstanceRef.current) {
         editorInstanceRef.current.destroy();
         editorInstanceRef.current = null;
+        editorInitializedRef.current = false;
       }
     };
-  }, []);
+  }, [showWhiteboard, code, onSave, onSliderChange, onParamsChange]);
 
   // Track editor code changes and update button states
   useEffect(() => {
@@ -471,6 +489,22 @@ export function Workspace({
     };
   }, [hasNewCodeToSave]);
 
+  const handleWhiteboardClick = useCallback(() => {
+    setShowWhiteboard(true);
+  }, []);
+
+  const handleCloseWhiteboard = useCallback(() => {
+    setShowWhiteboard(false);
+  }, []);
+
+  if (showWhiteboard) {
+    return (
+      <main className="h-[calc(100vh-50px)]">
+        <Whiteboard versions={savedVersions} onClose={handleCloseWhiteboard} />
+      </main>
+    );
+  }
+
   return (
     <main className="h-[calc(100vh-50px)]">
       <Split
@@ -489,6 +523,7 @@ export function Workspace({
           sidebarWidth={sidebarWidth}
           onLoadVersion={handleLoadVersion}
           onDeleteVersion={handleDeleteVersion}
+          onWhiteboardClick={handleWhiteboardClick}
         />
         <EditorPanel
           editorRef={editorRef}
