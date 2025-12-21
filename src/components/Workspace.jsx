@@ -95,6 +95,7 @@ export function Workspace({
   );
   const [code, setCode] = useState(providedInitialCode);
   const [previewCode, setPreviewCode] = useState(providedInitialCode);
+  const [multiplesCode, setMultiplesCode] = useState(providedInitialCode);
   const [sketchType, setSketchType] = useState(providedSketchType);
   const [hasNewCodeToRun, setHasNewCodeToRun] = useState(false);
   const [hasNewCodeToSave, setHasNewCodeToSave] = useState(false);
@@ -133,6 +134,7 @@ export function Workspace({
   useEffect(() => {
     setCode(providedInitialCode);
     setPreviewCode(providedInitialCode);
+    setMultiplesCode(providedInitialCode);
     if (editorInstanceRef.current) {
       editorInstanceRef.current.setCode(providedInitialCode);
     }
@@ -206,6 +208,7 @@ export function Workspace({
   const onSliderChange = useCallback((code) => {
     setCode(code);
     setPreviewCode(code);
+    setMultiplesCode(code); // Update multiples code when slider is dragged
   }, []);
 
   const onParamsChange = useCallback(({params, code, type}) => {
@@ -214,9 +217,9 @@ export function Workspace({
       return;
     }
 
-    // When positions are updated due to code edits, update the code state for multiples
-    // but don't update previewCode - that only updates when user explicitly runs
-    // This prevents the preview from automatically rerunning on every code edit
+    // When positions are updated due to code edits, update the code state
+    // but don't update previewCode or multiplesCode - those only update when user explicitly runs or drags slider
+    // This prevents the preview and multiples from automatically rerunning on every code edit
     if (type === "position-update" && code !== undefined) {
       setCode(code);
     }
@@ -258,6 +261,7 @@ export function Workspace({
       editorInstanceRef.current.update(params, values);
       setCode(code);
       setPreviewCode(code);
+      setMultiplesCode(code); // Update multiples code when selecting from multiples
       setHasNewCodeToRun(false);
       setShowMultiples(false);
       // Reset the flag after a short delay to allow any pending updates to complete
@@ -301,6 +305,7 @@ export function Workspace({
       editorInstanceRef.current.setCode(version.code);
       setCode(version.code);
       setPreviewCode(version.code);
+      setMultiplesCode(version.code);
       setHasNewCodeToRun(false);
       setHasNewCodeToSave(false);
       setCurrentVersionId(version.id);
@@ -458,6 +463,7 @@ export function Workspace({
       const currentCode = editorInstanceRef.current.getCode();
       setCode(currentCode);
       setPreviewCode(currentCode);
+      setMultiplesCode(currentCode); // Update multiples code when explicitly run
       setHasNewCodeToRun(false);
     }
   }, []);
@@ -764,6 +770,7 @@ export function Workspace({
         editorInstanceRef.current.setCode(version.code);
         setCode(version.code);
         setPreviewCode(version.code);
+        setMultiplesCode(version.code);
         setHasNewCodeToRun(false);
         setHasNewCodeToSave(false);
         setCurrentVersionId(version.id);
@@ -812,6 +819,7 @@ export function Workspace({
                     editorInstanceRef.current.setCode(selected.code);
                     setCode(selected.code);
                     setPreviewCode(selected.code);
+                    setMultiplesCode(selected.code);
                   }
                 } else if (updatedVersions.length > 0) {
                   setCurrentVersionId(updatedVersions[0].id);
@@ -819,6 +827,7 @@ export function Workspace({
                     editorInstanceRef.current.setCode(updatedVersions[0].code);
                     setCode(updatedVersions[0].code);
                     setPreviewCode(updatedVersions[0].code);
+                    setMultiplesCode(updatedVersions[0].code);
                   }
                 } else {
                   setCurrentVersionId(null);
@@ -829,6 +838,7 @@ export function Workspace({
                   editorInstanceRef.current.setCode(updatedVersions[0].code);
                   setCode(updatedVersions[0].code);
                   setPreviewCode(updatedVersions[0].code);
+                  setMultiplesCode(updatedVersions[0].code);
                 }
               } else {
                 setCurrentVersionId(null);
@@ -989,7 +999,7 @@ export function Workspace({
         />
         <PreviewPanel
           showMultiples={showMultiples}
-          code={code}
+          code={multiplesCode}
           previewCode={previewCode}
           params={params}
           ranges={ranges}
