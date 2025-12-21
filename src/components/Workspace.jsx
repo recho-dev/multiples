@@ -87,6 +87,7 @@ export function Workspace({
   const editorRef = useRef(null);
   const editorInstanceRef = useRef(null);
   const editorInitializedRef = useRef(false);
+  const pendingVersionToLoadRef = useRef(null);
 
   // Update local state when props change
   useEffect(() => {
@@ -179,13 +180,32 @@ export function Workspace({
     // Initialize editor when not showing whiteboard and editor ref is available
     if (!editorRef.current || editorInitializedRef.current) return;
     
+    // Use pending version code if available, otherwise use current code
+    const codeToLoad = pendingVersionToLoadRef.current?.code || code;
+    
     editorInstanceRef.current = createEditor(editorRef.current, {
-      initialCode: code,
+      initialCode: codeToLoad,
       onSave,
       onSliderChange,
       onParamsChange,
     });
     editorInitializedRef.current = true;
+    
+    // If there's a pending version to load, load it now
+    if (pendingVersionToLoadRef.current) {
+      const version = pendingVersionToLoadRef.current;
+      editorInstanceRef.current.setCode(version.code);
+      setCode(version.code);
+      setHasNewCodeToRun(false);
+      setHasNewCodeToSave(false);
+      setCurrentVersionId(version.id);
+      if (!isExample && sketchId) {
+        setSelectedVersion(sketchId, version.id).catch((err) => {
+          console.error("Failed to set selected version:", err);
+        });
+      }
+      pendingVersionToLoadRef.current = null;
+    }
     
     return () => {
       if (editorInstanceRef.current) {
@@ -194,7 +214,7 @@ export function Workspace({
         editorInitializedRef.current = false;
       }
     };
-  }, [showWhiteboard, code, onSave, onSliderChange, onParamsChange]);
+  }, [showWhiteboard, code, onSave, onSliderChange, onParamsChange, isExample, sketchId]);
 
   // Track editor code changes and update button states
   useEffect(() => {
@@ -497,10 +517,24 @@ export function Workspace({
     setShowWhiteboard(false);
   }, []);
 
+  const handleSelectVersionFromWhiteboard = useCallback(
+    (version) => {
+      // Store the version to load after editor reinitializes
+      pendingVersionToLoadRef.current = version;
+      // Close whiteboard to reinitialize editor
+      setShowWhiteboard(false);
+    },
+    []
+  );
+
   if (showWhiteboard) {
     return (
       <main className="h-[calc(100vh-50px)]">
-        <Whiteboard versions={savedVersions} onClose={handleCloseWhiteboard} />
+        <Whiteboard
+          versions={savedVersions}
+          onClose={handleCloseWhiteboard}
+          onSelectVersion={handleSelectVersionFromWhiteboard}
+        />
       </main>
     );
   }
