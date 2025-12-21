@@ -187,8 +187,8 @@ export function Workspace({
     // Initialize editor when not showing whiteboard and editor ref is available
     if (!editorRef.current || editorInitializedRef.current) return;
 
-    // Use pending version code if available, otherwise use current code
-    const codeToLoad = pendingVersionToLoadRef.current?.code || code;
+    // Use pending version code if available, otherwise use providedInitialCode
+    const codeToLoad = pendingVersionToLoadRef.current?.code || providedInitialCode;
 
     editorInstanceRef.current = createEditor(editorRef.current, {
       initialCode: codeToLoad,
