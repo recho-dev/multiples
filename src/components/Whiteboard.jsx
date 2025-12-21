@@ -56,6 +56,7 @@ export function Whiteboard({versions, onClose}) {
     initialNodeX: 0,
     initialNodeY: 0,
   });
+  const [isModifierPressed, setIsModifierPressed] = useState(false);
 
   const calculateLayout = useCallback(() => {
     if (versions.length === 0 || !containerRef.current) return;
@@ -197,6 +198,28 @@ export function Whiteboard({versions, onClose}) {
     return () => resizeObserver.disconnect();
   }, [calculateLayout]);
 
+  // Track modifier key (CMD/Ctrl) state for cursor updates
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.metaKey || e.ctrlKey) {
+        setIsModifierPressed(true);
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (!e.metaKey && !e.ctrlKey) {
+        setIsModifierPressed(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
   // Handle dragging sketches (only when CMD/Ctrl is pressed)
   const handleMouseDown = useCallback((e, nodeId, nodeX, nodeY) => {
     // Only allow sketch dragging if CMD (Mac) or Ctrl (Windows/Linux) is pressed
@@ -328,19 +351,14 @@ export function Whiteboard({versions, onClose}) {
               top: `${node.y}px`,
               width: `${node.data.width}px`,
               height: `${node.data.height}px`,
-              cursor: dragStateRef.current.isDragging && dragStateRef.current.nodeId === node.id ? "grabbing" : "grab",
+              cursor:
+                dragStateRef.current.isDragging && dragStateRef.current.nodeId === node.id
+                  ? "grabbing"
+                  : isModifierPressed
+                    ? "grab"
+                    : "move",
             }}
             onMouseDown={(e) => handleMouseDown(e, node.id, node.x, node.y)}
-            onMouseEnter={(e) => {
-              if (e.metaKey || e.ctrlKey) {
-                e.currentTarget.style.cursor = "grab";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!dragStateRef.current.isDragging) {
-                e.currentTarget.style.cursor = "default";
-              }
-            }}
           >
             <Sketch code={node.version.code} width={node.data.width} height={node.data.height} />
           </div>
