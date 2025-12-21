@@ -222,7 +222,7 @@ export function Workspace({
         editorInitializedRef.current = false;
       }
     };
-  }, [showWhiteboard, sketchType, onSave, onSliderChange, onParamsChange, isExample, sketchId]);
+  }, [showWhiteboard, sketchType, onSave, onSliderChange, onParamsChange, isExample]);
 
   // Track editor code changes and update button states
   useEffect(() => {
