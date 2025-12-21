@@ -416,7 +416,9 @@ export function Workspace({
       const currentEditorCode = editorInstanceRef.current.getCode();
 
       // Check if there's new code to run
-      const needsRun = currentEditorCode !== code;
+      // Compare against previewCode (not code) since code gets updated on position updates
+      // but previewCode only updates when user explicitly runs
+      const needsRun = currentEditorCode !== previewCode;
       setHasNewCodeToRun(needsRun);
 
       // Check if there's new code or params to save
@@ -449,7 +451,7 @@ export function Workspace({
     const interval = setInterval(checkEditorChanges, 500);
 
     return () => clearInterval(interval);
-  }, [code, currentVersionId, savedVersions, showWhiteboard, params, ranges, providedInitialCode]);
+  }, [previewCode, currentVersionId, savedVersions, showWhiteboard, params, ranges, providedInitialCode]);
 
   const handleRun = useCallback(() => {
     if (editorInstanceRef.current) {
