@@ -1,4 +1,4 @@
-import {useState, useCallback, useRef, useEffect} from "react";
+import {useState, useCallback, useRef, useEffect, useLayoutEffect} from "react";
 import Split from "react-split";
 import {createEditor} from "../editor/index.js";
 import friendlyWords from "friendly-words";
@@ -116,6 +116,7 @@ export function Workspace({
   const loadedParamsForVersionRef = useRef(null);
   const isSelectingFromMultiplesRef = useRef(false);
   const isSwitchingContextRef = useRef(false);
+  const isLoadingParamsRef = useRef(false);
 
   // Update local state when props change
   useEffect(() => {
@@ -135,17 +136,28 @@ export function Workspace({
   useEffect(() => {
     setCode(providedInitialCode);
     setPreviewCode(providedInitialCode);
-    setMultiplesCode(providedInitialCode);
+    // Only update multiplesCode if there's no version or version has no params
+    // Otherwise, it will be updated together with params in the params loading effect
+    if (!currentVersionId || savedVersions.length === 0) {
+      setMultiplesCode(providedInitialCode);
+    } else {
+      const version = savedVersions.find((v) => v.id === currentVersionId);
+      if (!version || !version.params || !version.params.definitions || version.params.definitions.length === 0) {
+        setMultiplesCode(providedInitialCode);
+      }
+      // If version has params, multiplesCode will be updated in the params loading effect
+    }
     if (editorInstanceRef.current) {
       editorInstanceRef.current.setCode(providedInitialCode);
     }
-  }, [providedInitialCode]);
+  }, [providedInitialCode, currentVersionId, savedVersions]);
 
   // Clear params when switching sketches or examples
   useEffect(() => {
     // Reset the loaded params ref when sketchId or isExample changes
     // This ensures params are properly loaded/cleared when switching contexts
     loadedParamsForVersionRef.current = null;
+    isLoadingParamsRef.current = true;
 
     // Set flag to ignore stale params updates from editor during context switch
     isSwitchingContextRef.current = true;
@@ -154,6 +166,10 @@ export function Workspace({
     setParams([]);
     setRanges({});
     setShowMultiples(false);
+    // Reset cellSize to default when switching contexts to prevent stale size
+    setCellSize(200);
+    // Don't update multiplesCode here - it will be updated together with params
+    // when the version loads to ensure they stay in sync
 
     // Clear editor params if editor is initialized
     if (editorInstanceRef.current) {
@@ -164,7 +180,7 @@ export function Workspace({
     setTimeout(() => {
       isSwitchingContextRef.current = false;
     }, 100);
-  }, [sketchId, isExample]);
+  }, [sketchId, isExample, providedInitialCode]);
 
   // Load split sizes on mount
   useEffect(() => {
@@ -391,17 +407,31 @@ export function Workspace({
   }, [showWhiteboard, sketchType, onSave, onSliderChange, onParamsChange, providedInitialCode, isExample]);
 
   // Load params from current version when editor is ready and version data is available
-  useEffect(() => {
+  // Also update multiplesCode here to ensure code and params are always in sync
+  // Use useLayoutEffect to ensure updates happen synchronously before paint
+  useLayoutEffect(() => {
     if (editorInstanceRef.current && !showWhiteboard) {
       if (currentVersionId && savedVersions.length > 0) {
         // We have a version, check if it has params
         if (loadedParamsForVersionRef.current !== currentVersionId) {
           const version = savedVersions.find((v) => v.id === currentVersionId);
           if (version && version.params && version.params.definitions && version.params.definitions.length > 0) {
+            // Update code, params, and cellSize together atomically in a single batch
+            // This ensures they're always in sync and prevents mismatched renders
             editorInstanceRef.current.setParams(version.params.definitions);
+            // Update all state together in one batch: code, params, ranges, and cellSize
+            setMultiplesCode(version.code || providedInitialCode);
             setParams(version.params.definitions);
             setRanges(version.params.ranges || {});
+            // Update cellSize in the same batch before showing multiples
+            if (version.cellSize !== undefined) {
+              setCellSize(version.cellSize);
+            } else {
+              setCellSize(200); // Default value
+            }
+            // Show multiples after all state is updated
             setShowMultiples(true);
+            isLoadingParamsRef.current = false;
             loadedParamsForVersionRef.current = currentVersionId;
           } else {
             // Clear params if version doesn't have them
@@ -409,13 +439,12 @@ export function Workspace({
             setParams([]);
             setRanges({});
             setShowMultiples(false);
+            // Update multiplesCode to current code when no params
+            setMultiplesCode(providedInitialCode);
+            // Reset cellSize to default when no params
+            setCellSize(200);
+            isLoadingParamsRef.current = false;
             loadedParamsForVersionRef.current = currentVersionId;
-          }
-          // Restore cell size if the version has it
-          if (version && version.cellSize !== undefined) {
-            setCellSize(version.cellSize);
-          } else {
-            setCellSize(200); // Default value
           }
         }
       } else {
@@ -425,11 +454,13 @@ export function Workspace({
           setParams([]);
           setRanges({});
           setShowMultiples(false);
+          setMultiplesCode(providedInitialCode);
+          isLoadingParamsRef.current = false;
           loadedParamsForVersionRef.current = null;
         }
       }
     }
-  }, [currentVersionId, savedVersions, showWhiteboard, sketchId, isExample]);
+  }, [currentVersionId, savedVersions, showWhiteboard, sketchId, isExample, providedInitialCode]);
 
   // Track editor code changes and update button states
   useEffect(() => {

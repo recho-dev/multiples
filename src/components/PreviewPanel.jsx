@@ -17,6 +17,9 @@ export function PreviewPanel({
   sketchId,
   currentVersionId,
 }) {
+  // Create a key that includes cellSize to force remount when it changes
+  // This prevents brief flashes of incorrect size when switching examples
+  const multiplesKey = `${sketchId || 'new'}-${currentVersionId || 'none'}-${cellSize}`;
   return (
     <div className="h-full flex flex-col px-4 py-2">
       <div className="flex gap-2 mb-2 flex-shrink-0">
@@ -38,6 +41,7 @@ export function PreviewPanel({
       <div className="flex-1 overflow-auto">
         {showMultiples ? (
           <Multiples
+            key={multiplesKey}
             code={code}
             params={params}
             ranges={ranges}
