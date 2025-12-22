@@ -5,6 +5,10 @@
       "destination": "/assets/:path*"
     },
     {
+      "source": "/multiples/:file.:ext",
+      "destination": "/:file.:ext"
+    },
+    {
       "source": "/multiples/examples/:path*",
       "destination": "/index.html"
     },
