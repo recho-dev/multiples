@@ -34,17 +34,29 @@ export function ExamplesModal({examples, onSelect, onClose}) {
           <div className="space-y-6">
             {groups.map((group) => (
               <div key={group}>
-                <h3 className="text-md font-medium mb-3 text-gray-700 border-b border-gray-200 pb-2">{group}</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <h3 className="text-sm font-medium mb-2 text-gray-700 border-b border-gray-200 pb-1">{group}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                   {groupedExamples[group].map((exampleEntry) => {
                     const example = exampleEntry.data;
                     return (
                       <button
                         key={example.id}
                         onClick={() => onSelect(example)}
-                        className="p-4 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors text-left rounded"
+                        className="p-2 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors text-left rounded flex flex-col"
                       >
-                        <div className="font-medium mb-1">{example.name}</div>
+                        {exampleEntry.img && (
+                          <div className="mb-2 w-full aspect-square bg-gray-100 rounded overflow-hidden">
+                            <img
+                              src={exampleEntry.img}
+                              alt={example.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                              }}
+                            />
+                          </div>
+                        )}
+                        <div className="text-sm font-medium mb-0.5 leading-tight">{example.name}</div>
                         <div className="text-xs text-gray-500">
                           {example.versions?.length || 0} version{example.versions?.length !== 1 ? "s" : ""}
                         </div>
