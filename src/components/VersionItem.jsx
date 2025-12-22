@@ -1,9 +1,9 @@
 import {forwardRef, useState, useRef, useEffect} from "react";
-import {Sketch} from "./Sketch.jsx";
+import {Thumbnail} from "./Thumbnail.jsx";
 import {clsx} from "../clsx.js";
 
 export const VersionItem = forwardRef(function VersionItem(
-  {version, isCurrent, width, onLoad, onDelete, onSaveName},
+  {version, isCurrent, width, sketchType = "p5", onLoad, onDelete, onSaveName},
   ref
 ) {
   const [isEditing, setIsEditing] = useState(false);
@@ -56,7 +56,7 @@ export const VersionItem = forwardRef(function VersionItem(
       title={version.code.substring(0, 50) + "..."}
     >
       <div onClick={() => onLoad(version)} className="w-full relative sketch-container">
-        <Sketch code={version.code} width={width} />
+        <Thumbnail code={version.code} width={width} sketchType={sketchType} />
       </div>
       <div className="px-2 py-1 text-xs text-gray-500 cursor-text hover:bg-gray-100 rounded text-center" onClick={handleClick}>
         {isEditing ? (

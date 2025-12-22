@@ -1100,6 +1100,7 @@ export function Workspace({
           versions={savedVersions}
           currentVersionId={currentVersionId}
           sidebarWidth={sidebarWidth}
+          sketchType={sketchType}
           onLoadVersion={handleLoadVersion}
           onDeleteVersion={handleDeleteVersion}
           onSaveVersionName={handleSaveVersionName}
