@@ -457,7 +457,7 @@ export function Workspace({
             currentVersion.params?.definitions || [],
             currentVersion.params?.ranges || {}
           );
-          const cellSizeChanged = (currentVersion.cellSize || 200) !== cellSize;
+          const cellSizeChanged = (currentVersion.cellSize ?? 200) !== cellSize;
           needsSave = codeChanged || paramsChanged || cellSizeChanged;
         } else {
           const codeChanged = currentEditorCode !== providedInitialCode;
@@ -467,7 +467,8 @@ export function Workspace({
       } else {
         const codeChanged = currentEditorCode !== providedInitialCode;
         const paramsChanged = params.length > 0 || Object.keys(ranges).length > 0;
-        needsSave = codeChanged || paramsChanged;
+        const cellSizeChanged = cellSize !== 200; // Default is 200
+        needsSave = codeChanged || paramsChanged || cellSizeChanged;
       }
       setHasNewCodeToSave(needsSave);
     };
@@ -476,7 +477,7 @@ export function Workspace({
     const interval = setInterval(checkEditorChanges, 500);
 
     return () => clearInterval(interval);
-  }, [previewCode, currentVersionId, savedVersions, showWhiteboard, params, ranges, providedInitialCode]);
+  }, [previewCode, currentVersionId, savedVersions, showWhiteboard, params, ranges, providedInitialCode, cellSize]);
 
   const handleRun = useCallback(() => {
     if (editorInstanceRef.current) {
@@ -574,7 +575,7 @@ export function Workspace({
           currentVersion.params?.definitions || [],
           currentVersion.params?.ranges || {}
         );
-        const cellSizeChanged = (currentVersion.cellSize || 200) !== cellSize;
+        const cellSizeChanged = (currentVersion.cellSize ?? 200) !== cellSize;
         if (!codeChanged && !paramsChanged && !cellSizeChanged) {
           return;
         }
@@ -698,6 +699,7 @@ export function Workspace({
     params,
     ranges,
     sketchType,
+    cellSize,
   ]);
 
   const handleDuplicate = useCallback(async () => {
