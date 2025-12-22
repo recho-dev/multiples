@@ -544,6 +544,14 @@ export function Workspace({
     if (isExample) return; // Don't save examples directly
 
     const currentCode = editorInstanceRef.current.getCode();
+    
+    // Safeguard: Infer sketch type from code if it's WebGL
+    let actualSketchType = sketchType;
+    if (currentCode?.trim().startsWith("#version") && sketchType !== "webgl2") {
+      actualSketchType = "webgl2";
+      setSketchType("webgl2");
+    }
+    
     let currentSketchId = sketchId;
 
     // If no sketch ID, create a new sketch first
@@ -553,7 +561,7 @@ export function Workspace({
       await saveSketch({
         id: currentSketchId,
         name: newSketchName,
-        type: sketchType,
+        type: actualSketchType,
         timestamp: new Date().toISOString(),
         versions: [],
         selectedVersion: null,
@@ -629,9 +637,9 @@ export function Workspace({
           nextVersionId: 0,
         });
       } else {
-        // Update sketch type if it changed
-        if (currentSketch.type !== sketchType) {
-          currentSketch.type = sketchType;
+        // Always ensure sketch type is set and up to date
+        if (!currentSketch.type || currentSketch.type !== actualSketchType) {
+          currentSketch.type = actualSketchType;
           await saveSketch(currentSketch);
         }
       }
