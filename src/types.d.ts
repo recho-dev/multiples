@@ -26,6 +26,8 @@ export interface Version {
     /** Range settings keyed by `${from}-${to}` */
     ranges: Record<string, {start: string; end: string; count: string; type: "Float" | "Int"}>;
   };
+  /** Cell size for multiples view (default: 200) */
+  cellSize?: number;
 }
 
 /**

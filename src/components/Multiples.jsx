@@ -1,4 +1,4 @@
-import {useMemo, useState, useEffect, useRef} from "react";
+import {useMemo, useState, useEffect, useRef, useCallback} from "react";
 import {Sketch} from "./Sketch.jsx";
 import * as d3 from "d3";
 
@@ -124,14 +124,42 @@ export function Multiples({
   params,
   ranges: initialRanges = {},
   onRangesChange,
+  cellSize: initialCellSize = 200,
+  onCellSizeChange,
   sketchType = "p5",
   onSelect,
   sketchId,
   currentVersionId,
 }) {
   const cols = 4;
+  const [sketchSize, setSketchSize] = useState(initialCellSize);
+  const [sliderValue, setSliderValue] = useState(initialCellSize);
   const skipNotificationRef = useRef(false);
   const prevInitialRangesRef = useRef(JSON.stringify(initialRanges));
+  const debounceTimeoutRef = useRef(null);
+
+  // Update sketch size when initialCellSize changes (e.g., when loading a version)
+  useEffect(() => {
+    setSketchSize(initialCellSize);
+    setSliderValue(initialCellSize);
+  }, [initialCellSize]);
+
+  // Debounced function to update sketch size
+  const debouncedSetSketchSize = useCallback(
+    (value) => {
+      setSliderValue(value); // Update slider immediately for visual feedback
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      debounceTimeoutRef.current = setTimeout(() => {
+        setSketchSize(value);
+        if (onCellSizeChange) {
+          onCellSizeChange(value);
+        }
+      }, 150);
+    },
+    [onCellSizeChange]
+  );
 
   // Initialize range settings for each param, using initialRanges if provided
   const [ranges, setRanges] = useState(() => {
@@ -236,12 +264,27 @@ export function Multiples({
     });
   };
 
-  const multiples = useMemo(() => generateCode(code, params, ranges, {count: cols}), [code, params, ranges]);
+  // Calculate column count: if more than 1 param, use second param's count, otherwise use default
+  const columnCount = useMemo(() => {
+    if (params.length > 1) {
+      const secondParamKey = getParamKey(params[1]);
+      const secondParamRange = ranges[secondParamKey];
+      if (secondParamRange && secondParamRange.count) {
+        return parseInt(secondParamRange.count, 10) || cols;
+      }
+    }
+    return cols;
+  }, [params, ranges, cols]);
+
+  const multiples = useMemo(
+    () => generateCode(code, params, ranges, {count: columnCount}),
+    [code, params, ranges, columnCount]
+  );
 
   const rows = useMemo(() => {
-    const n = Math.ceil(multiples.length / cols);
-    return Array.from({length: n}, (_, i) => multiples.slice(i * cols, (i + 1) * cols));
-  }, [multiples, cols]);
+    const n = Math.ceil(multiples.length / columnCount);
+    return Array.from({length: n}, (_, i) => multiples.slice(i * columnCount, (i + 1) * columnCount));
+  }, [multiples, columnCount]);
 
   if (params.length === 0) {
     return (
@@ -253,6 +296,21 @@ export function Multiples({
 
   return (
     <div>
+      <div className="mb-4">
+        <label className="flex items-center gap-2 text-xs">
+          <span>Cell Size:</span>
+          <input
+            type="range"
+            min="50"
+            max="400"
+            step="10"
+            value={sliderValue}
+            onChange={(e) => debouncedSetSketchSize(parseInt(e.target.value, 10))}
+            className="w-[200px]"
+          />
+          <span className="w-12 text-right">{sliderValue}px</span>
+        </label>
+      </div>
       <div className="space-y-2 my-2">
         {params.map((param, i) => {
           const paramKey = getParamKey(param);
@@ -311,22 +369,40 @@ export function Multiples({
           );
         })}
       </div>
-      <div>
-        {rows.map((row, i) => (
-          <div key={i} className="flex gap-6 py-3">
-            {row.map((multiple, j) => (
-              <div
-                key={j}
-                className="w-[200px] h-[200px] cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => onSelect(multiple)}
-              >
-                <Sketch code={multiple.code} width={200} height={200} sketchType={sketchType} />
-                <span className="text-xs">{`(${multiple.values.map((v, idx) => `X${idx}=${v}`).join(", ")})`}</span>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
+      {params.length === 1 ? (
+        // Flexbox layout for single param
+        <div className="flex flex-wrap gap-6 py-3">
+          {multiples.map((multiple, i) => (
+            <div
+              key={i}
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+              style={{width: `${sketchSize}px`, height: `${sketchSize}px`}}
+              onClick={() => onSelect(multiple)}
+            >
+              <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
+              <span className="text-xs">{`(${multiple.values.map((v, idx) => `X${idx}=${v}`).join(", ")})`}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        // Grid layout for multiple params
+        <div
+          className="grid gap-6 py-3"
+          style={{gridTemplateColumns: `repeat(${columnCount}, minmax(${sketchSize}px, 1fr))`}}
+        >
+          {multiples.map((multiple, i) => (
+            <div
+              key={i}
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+              style={{width: `${sketchSize}px`, height: `${sketchSize}px`}}
+              onClick={() => onSelect(multiple)}
+            >
+              <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
+              <span className="text-xs">{`(${multiple.values.map((v, idx) => `X${idx}=${v}`).join(", ")})`}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

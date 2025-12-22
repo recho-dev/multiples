@@ -94,11 +94,14 @@ export function Workspace({
     [sketchId, isExample, onSketchNameChange]
   );
   const [code, setCode] = useState(providedInitialCode);
+  const [previewCode, setPreviewCode] = useState(providedInitialCode);
+  const [multiplesCode, setMultiplesCode] = useState(providedInitialCode);
   const [sketchType, setSketchType] = useState(providedSketchType);
   const [hasNewCodeToRun, setHasNewCodeToRun] = useState(false);
   const [hasNewCodeToSave, setHasNewCodeToSave] = useState(false);
   const [params, setParams] = useState([]);
   const [ranges, setRanges] = useState({});
+  const [cellSize, setCellSize] = useState(200);
   const [showMultiples, setShowMultiples] = useState(false);
   const [savedVersions, setSavedVersions] = useState(initialVersions);
   const [currentVersionId, setCurrentVersionId] = useState(initialVersionId);
@@ -131,6 +134,8 @@ export function Workspace({
   // Update code when initialCode prop changes (e.g., when loading from URL)
   useEffect(() => {
     setCode(providedInitialCode);
+    setPreviewCode(providedInitialCode);
+    setMultiplesCode(providedInitialCode);
     if (editorInstanceRef.current) {
       editorInstanceRef.current.setCode(providedInitialCode);
     }
@@ -203,6 +208,8 @@ export function Workspace({
 
   const onSliderChange = useCallback((code) => {
     setCode(code);
+    setPreviewCode(code);
+    setMultiplesCode(code); // Update multiples code when slider is dragged
   }, []);
 
   const onParamsChange = useCallback(({params, code, type}) => {
@@ -211,8 +218,9 @@ export function Workspace({
       return;
     }
 
-    // When positions are updated due to code edits, also update the code state
-    // to keep code and params in sync
+    // When positions are updated due to code edits, update the code state
+    // but don't update previewCode or multiplesCode - those only update when user explicitly runs or drags slider
+    // This prevents the preview and multiples from automatically rerunning on every code edit
     if (type === "position-update" && code !== undefined) {
       setCode(code);
     }
@@ -253,6 +261,8 @@ export function Workspace({
       isSelectingFromMultiplesRef.current = true;
       editorInstanceRef.current.update(params, values);
       setCode(code);
+      setPreviewCode(code);
+      setMultiplesCode(code); // Update multiples code when selecting from multiples
       setHasNewCodeToRun(false);
       setShowMultiples(false);
       // Reset the flag after a short delay to allow any pending updates to complete
@@ -295,6 +305,8 @@ export function Workspace({
       const version = pendingVersionToLoadRef.current;
       editorInstanceRef.current.setCode(version.code);
       setCode(version.code);
+      setPreviewCode(version.code);
+      setMultiplesCode(version.code);
       setHasNewCodeToRun(false);
       setHasNewCodeToSave(false);
       setCurrentVersionId(version.id);
@@ -320,6 +332,12 @@ export function Workspace({
         setParams([]);
         setRanges({});
         setShowMultiples(false);
+      }
+      // Restore cell size if the version has it
+      if (version.cellSize !== undefined) {
+        setCellSize(version.cellSize);
+      } else {
+        setCellSize(200); // Default value
       }
       loadedParamsForVersionRef.current = version.id;
 
@@ -355,6 +373,12 @@ export function Workspace({
         setShowMultiples(false);
         loadedParamsForVersionRef.current = currentVersionId;
       }
+      // Restore cell size if the version has it
+      if (version && version.cellSize !== undefined) {
+        setCellSize(version.cellSize);
+      } else {
+        setCellSize(200); // Default value
+      }
     }
 
     return () => {
@@ -387,6 +411,12 @@ export function Workspace({
             setShowMultiples(false);
             loadedParamsForVersionRef.current = currentVersionId;
           }
+          // Restore cell size if the version has it
+          if (version && version.cellSize !== undefined) {
+            setCellSize(version.cellSize);
+          } else {
+            setCellSize(200); // Default value
+          }
         }
       } else {
         // No version selected, clear params
@@ -410,7 +440,9 @@ export function Workspace({
       const currentEditorCode = editorInstanceRef.current.getCode();
 
       // Check if there's new code to run
-      const needsRun = currentEditorCode !== code;
+      // Compare against previewCode (not code) since code gets updated on position updates
+      // but previewCode only updates when user explicitly runs
+      const needsRun = currentEditorCode !== previewCode;
       setHasNewCodeToRun(needsRun);
 
       // Check if there's new code or params to save
@@ -425,7 +457,8 @@ export function Workspace({
             currentVersion.params?.definitions || [],
             currentVersion.params?.ranges || {}
           );
-          needsSave = codeChanged || paramsChanged;
+          const cellSizeChanged = (currentVersion.cellSize ?? 200) !== cellSize;
+          needsSave = codeChanged || paramsChanged || cellSizeChanged;
         } else {
           const codeChanged = currentEditorCode !== providedInitialCode;
           const paramsChanged = params.length > 0 || Object.keys(ranges).length > 0;
@@ -434,7 +467,8 @@ export function Workspace({
       } else {
         const codeChanged = currentEditorCode !== providedInitialCode;
         const paramsChanged = params.length > 0 || Object.keys(ranges).length > 0;
-        needsSave = codeChanged || paramsChanged;
+        const cellSizeChanged = cellSize !== 200; // Default is 200
+        needsSave = codeChanged || paramsChanged || cellSizeChanged;
       }
       setHasNewCodeToSave(needsSave);
     };
@@ -443,12 +477,14 @@ export function Workspace({
     const interval = setInterval(checkEditorChanges, 500);
 
     return () => clearInterval(interval);
-  }, [code, currentVersionId, savedVersions, showWhiteboard, params, ranges, providedInitialCode]);
+  }, [previewCode, currentVersionId, savedVersions, showWhiteboard, params, ranges, providedInitialCode, cellSize]);
 
   const handleRun = useCallback(() => {
     if (editorInstanceRef.current) {
       const currentCode = editorInstanceRef.current.getCode();
       setCode(currentCode);
+      setPreviewCode(currentCode);
+      setMultiplesCode(currentCode); // Update multiples code when explicitly run
       setHasNewCodeToRun(false);
     }
   }, []);
@@ -539,7 +575,8 @@ export function Workspace({
           currentVersion.params?.definitions || [],
           currentVersion.params?.ranges || {}
         );
-        if (!codeChanged && !paramsChanged) {
+        const cellSizeChanged = (currentVersion.cellSize ?? 200) !== cellSize;
+        if (!codeChanged && !paramsChanged && !cellSizeChanged) {
           return;
         }
 
@@ -558,6 +595,7 @@ export function Workspace({
                   },
                 }
               : {}),
+            cellSize,
           };
 
           await saveVersion(currentSketchId, updatedVersion);
@@ -630,6 +668,7 @@ export function Workspace({
               },
             }
           : {}),
+        cellSize,
       };
 
       await saveSketch(currentSketch);
@@ -660,6 +699,7 @@ export function Workspace({
     params,
     ranges,
     sketchType,
+    cellSize,
   ]);
 
   const handleDuplicate = useCallback(async () => {
@@ -719,6 +759,7 @@ export function Workspace({
               },
             }
           : {}),
+        cellSize,
       };
 
       await saveSketch(currentSketch);
@@ -754,6 +795,8 @@ export function Workspace({
 
         editorInstanceRef.current.setCode(version.code);
         setCode(version.code);
+        setPreviewCode(version.code);
+        setMultiplesCode(version.code);
         setHasNewCodeToRun(false);
         setHasNewCodeToSave(false);
         setCurrentVersionId(version.id);
@@ -770,6 +813,12 @@ export function Workspace({
           setParams([]);
           setRanges({});
           setShowMultiples(false);
+        }
+        // Restore cell size if the version has it
+        if (version.cellSize !== undefined) {
+          setCellSize(version.cellSize);
+        } else {
+          setCellSize(200); // Default value
         }
         loadedParamsForVersionRef.current = version.id;
 
@@ -801,12 +850,16 @@ export function Workspace({
                   if (editorInstanceRef.current) {
                     editorInstanceRef.current.setCode(selected.code);
                     setCode(selected.code);
+                    setPreviewCode(selected.code);
+                    setMultiplesCode(selected.code);
                   }
                 } else if (updatedVersions.length > 0) {
                   setCurrentVersionId(updatedVersions[0].id);
                   if (editorInstanceRef.current) {
                     editorInstanceRef.current.setCode(updatedVersions[0].code);
                     setCode(updatedVersions[0].code);
+                    setPreviewCode(updatedVersions[0].code);
+                    setMultiplesCode(updatedVersions[0].code);
                   }
                 } else {
                   setCurrentVersionId(null);
@@ -816,6 +869,8 @@ export function Workspace({
                 if (editorInstanceRef.current) {
                   editorInstanceRef.current.setCode(updatedVersions[0].code);
                   setCode(updatedVersions[0].code);
+                  setPreviewCode(updatedVersions[0].code);
+                  setMultiplesCode(updatedVersions[0].code);
                 }
               } else {
                 setCurrentVersionId(null);
@@ -976,10 +1031,13 @@ export function Workspace({
         />
         <PreviewPanel
           showMultiples={showMultiples}
-          code={code}
+          code={multiplesCode}
+          previewCode={previewCode}
           params={params}
           ranges={ranges}
           onRangesChange={setRanges}
+          cellSize={cellSize}
+          onCellSizeChange={setCellSize}
           sketchType={sketchType}
           onToggleMultiples={setShowMultiples}
           onSelect={onSelect}

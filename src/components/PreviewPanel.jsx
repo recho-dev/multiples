@@ -5,9 +5,12 @@ import {Multiples} from "./Multiples.jsx";
 export function PreviewPanel({
   showMultiples,
   code,
+  previewCode,
   params,
   ranges = {},
   onRangesChange,
+  cellSize,
+  onCellSizeChange,
   sketchType = "p5",
   onToggleMultiples,
   onSelect,
@@ -15,7 +18,7 @@ export function PreviewPanel({
   currentVersionId,
 }) {
   return (
-    <div className="h-full flex flex-col ml-4 mt-2 pb-4">
+    <div className="h-full flex flex-col px-4 py-2">
       <div className="flex gap-2 mb-2 flex-shrink-0">
         <span
           className={clsx("cursor-pointer", !showMultiples && "border-b-1")}
@@ -39,13 +42,15 @@ export function PreviewPanel({
             params={params}
             ranges={ranges}
             onRangesChange={onRangesChange}
+            cellSize={cellSize}
+            onCellSizeChange={onCellSizeChange}
             sketchType={sketchType}
             onSelect={onSelect}
             sketchId={sketchId}
             currentVersionId={currentVersionId}
           />
         ) : (
-          <Sketch code={code} sketchType={sketchType} />
+          <Sketch code={previewCode} sketchType={sketchType} />
         )}
       </div>
     </div>
