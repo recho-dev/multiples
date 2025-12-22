@@ -28,6 +28,8 @@ export interface Version {
   };
   /** Cell size for multiples view (default: 200) */
   cellSize?: number;
+  /** Whether to show labels and gaps between cells in multiples view (default: true) */
+  showLabels?: boolean;
 }
 
 /**

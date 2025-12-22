@@ -96,6 +96,7 @@ export async function saveVersion(sketchId, version) {
       code: version.code,
       ...(version.params && {params: version.params}),
       cellSize: version.cellSize !== undefined ? version.cellSize : 200,
+      showLabels: version.showLabels !== undefined ? version.showLabels : true,
     };
 
     // Add or update version

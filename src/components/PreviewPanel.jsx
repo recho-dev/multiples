@@ -11,6 +11,8 @@ export function PreviewPanel({
   onRangesChange,
   cellSize,
   onCellSizeChange,
+  showLabels = true,
+  onShowLabelsChange,
   sketchType = "p5",
   onToggleMultiples,
   onSelect,
@@ -44,6 +46,8 @@ export function PreviewPanel({
             onRangesChange={onRangesChange}
             cellSize={cellSize}
             onCellSizeChange={onCellSizeChange}
+            showLabels={showLabels}
+            onShowLabelsChange={onShowLabelsChange}
             sketchType={sketchType}
             onSelect={onSelect}
             sketchId={sketchId}
