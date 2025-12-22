@@ -1,5 +1,6 @@
 import {useMemo, useState, useEffect, useRef, useCallback} from "react";
 import {Sketch} from "./Sketch.jsx";
+import {WebGL2MultiplesRenderer} from "./WebGL2MultiplesRenderer.jsx";
 import * as d3 from "d3";
 
 function replaceValues(V, code, params) {
@@ -301,6 +302,10 @@ export function Multiples({
     return Array.from({length: n}, (_, i) => multiples.slice(i * columnCount, (i + 1) * columnCount));
   }, [multiples, columnCount]);
 
+  // Detect WebGL code by checking if code starts with #version
+  const isWebGLCode = code?.trim().startsWith("#version");
+  const isWebGL = sketchType === "webgl2" || isWebGLCode;
+
   if (params.length === 0) {
     return (
       <div className="text-gray-500">
@@ -384,7 +389,19 @@ export function Multiples({
           );
         })}
       </div>
-      {params.length === 1 ? (
+      {isWebGL ? (
+        // Use single WebGL context for WebGL sketches
+        <div className="py-3">
+          <div className="relative" style={{width: `${columnCount * sketchSize}px`}}>
+            <WebGL2MultiplesRenderer
+              multiples={multiples}
+              cellSize={sketchSize}
+              columnCount={columnCount}
+              onSelect={onSelect}
+            />
+          </div>
+        </div>
+      ) : params.length === 1 ? (
         // Flexbox layout for single param
         <div className="flex flex-wrap gap-6 py-3">
           {multiples.map((multiple, i) => (
