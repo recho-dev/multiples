@@ -16,22 +16,24 @@
           {
             "from": 10,
             "to": 13,
-            "value": "100"
+            "value": "100",
+            "uid": "wzkk5yiym4agiwkseoikd"
           },
           {
             "from": 25,
             "to": 26,
-            "value": "2"
+            "value": "2",
+            "uid": "3m25gg04yb27zzams99ft3"
           }
         ],
         "ranges": {
-          "10-13": {
+          "wzkk5yiym4agiwkseoikd": {
             "start": "100",
             "end": "200",
             "count": "3",
             "type": "Int"
           },
-          "25-26": {
+          "3m25gg04yb27zzams99ft3": {
             "start": "2",
             "end": "10",
             "count": "4",
@@ -53,22 +55,24 @@
           {
             "from": 10,
             "to": 13,
-            "value": "100"
+            "value": "100",
+            "uid": "6xamtc75hdbce5n82h48l9"
           },
           {
             "from": 25,
             "to": 26,
-            "value": "2"
+            "value": "2",
+            "uid": "kw4y0o4wutem0d0mwdxh"
           }
         ],
         "ranges": {
-          "10-13": {
+          "6xamtc75hdbce5n82h48l9": {
             "start": "100",
             "end": "400",
             "count": "4",
             "type": "Int"
           },
-          "25-26": {
+          "kw4y0o4wutem0d0mwdxh": {
             "start": "2",
             "end": "10",
             "count": "5",

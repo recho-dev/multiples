@@ -1,7 +1,7 @@
 import "./App.css";
 import {useState, useCallback, useRef, useEffect} from "react";
 import {useRoute} from "./hooks/useRoute.js";
-import {loadSketches, deleteSketch, getSketch} from "./storage.js";
+import {loadSketches, deleteSketch, getSketch, saveSketch} from "./storage.js";
 import {Header} from "./components/Header.jsx";
 import {Workspace} from "./components/Workspace.jsx";
 import {OpenSketchModal} from "./components/OpenSketchModal.jsx";
@@ -89,8 +89,26 @@ function SketchEditor() {
           setCurrentSketchId(sketch.id);
           setCurrentSketchName(sketch.name);
 
-          // Get sketch type from sketch metadata, default to "p5"
-          const sketchTypeValue = sketch.type || "p5";
+          // Get sketch type from sketch metadata, or infer from code, default to "p5"
+          let sketchTypeValue = sketch.type;
+          if (!sketchTypeValue) {
+            // Try to infer type from code if available
+            const versions = sketch.versions || [];
+            if (versions.length > 0) {
+              const firstVersion = versions.find((v) => v.id === sketch.selectedVersion) || versions[0];
+              if (firstVersion?.code?.trim().startsWith("#version")) {
+                sketchTypeValue = "webgl2";
+              }
+            }
+          }
+          sketchTypeValue = sketchTypeValue || "p5";
+
+          // If type was inferred or missing, update the sketch
+          if (sketch.type !== sketchTypeValue) {
+            sketch.type = sketchTypeValue;
+            await saveSketch(sketch);
+          }
+
           setSketchType(sketchTypeValue);
 
           const versions = sketch.versions || [];

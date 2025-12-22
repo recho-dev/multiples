@@ -9,6 +9,12 @@ function replaceValues(V, code, params) {
     let modifiedCode = code;
     for (const i of sortedI) {
       const {from, to} = params[i];
+      // Validate positions are within code bounds and from < to
+      if (from < 0 || to > code.length || from >= to) {
+        console.warn(`Invalid param positions: from=${from}, to=${to}, code.length=${code.length}`);
+        // Skip this param if positions are invalid
+        continue;
+      }
       modifiedCode = modifiedCode.slice(0, from) + v[i] + modifiedCode.slice(to);
     }
     return {code: modifiedCode, values: v};
@@ -80,7 +86,8 @@ function generateVariations(value, defaultCount, customRange = null) {
 }
 
 function getParamKey(param) {
-  return `${param.from}-${param.to}`;
+  // Use uid if available, fallback to from-to for backward compatibility
+  return param.uid || `${param.from}-${param.to}`;
 }
 
 function generateXd(code, params, ranges, {count = 4} = {}) {
@@ -89,10 +96,18 @@ function generateXd(code, params, ranges, {count = 4} = {}) {
   const V = d3.cross(V0, V1);
   const [, , ...Vs] = params;
   const restV = Vs.map((v) => {
-    const values = generateVariations(v.value, count ** 2, ranges[getParamKey(v)]);
+    const key = getParamKey(v);
+    const range = ranges[key];
+    // For additional params, generate count ** 2 variations
+    // Preserve the range settings (start, end, type) but override count
+    const modifiedRange = range ? {...range, count: String(count ** 2)} : null;
+    const values = generateVariations(v.value, count ** 2, modifiedRange);
     return values;
   });
-  for (let i = 0; i < count ** 2; i++) V[i].push(...restV.map((v) => v[i]));
+  const totalItems = count ** 2;
+  for (let i = 0; i < totalItems; i++) {
+    V[i].push(...restV.map((values) => values[i]));
+  }
   return replaceValues(V, code, params);
 }
 
@@ -380,7 +395,9 @@ export function Multiples({
               onClick={() => onSelect(multiple)}
             >
               <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
-              <span className="text-xs">{`(${multiple.values.map((v, idx) => `X${idx}=${v}`).join(", ")})`}</span>
+              <span className="text-xs whitespace-nowrap">{`(${multiple.values
+                .map((v, idx) => `X${idx}=${v}`)
+                .join(", ")})`}</span>
             </div>
           ))}
         </div>
@@ -398,7 +415,9 @@ export function Multiples({
               onClick={() => onSelect(multiple)}
             >
               <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
-              <span className="text-xs">{`(${multiple.values.map((v, idx) => `X${idx}=${v}`).join(", ")})`}</span>
+              <span className="text-xs whitespace-nowrap">{`(${multiple.values
+                .map((v, idx) => `X${idx}=${v}`)
+                .join(", ")})`}</span>
             </div>
           ))}
         </div>

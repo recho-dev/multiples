@@ -30,7 +30,8 @@ function generateFriendlyName() {
 }
 
 function getParamKey(param) {
-  return `${param.from}-${param.to}`;
+  // Use uid if available, fallback to from-to for backward compatibility
+  return param.uid || `${param.from}-${param.to}`;
 }
 
 function getDefaultRange(value, defaultCount = 4) {
@@ -116,6 +117,8 @@ export function Workspace({
   const loadedParamsForVersionRef = useRef(null);
   const isSelectingFromMultiplesRef = useRef(false);
   const isSwitchingContextRef = useRef(false);
+  const prevParamsLengthRef = useRef(0);
+  const paramsRef = useRef([]);
 
   // Update local state when props change
   useEffect(() => {
@@ -151,9 +154,11 @@ export function Workspace({
     isSwitchingContextRef.current = true;
 
     // Immediately clear params state to prevent stale params from showing
+    paramsRef.current = [];
     setParams([]);
     setRanges({});
     setShowMultiples(false);
+    prevParamsLengthRef.current = 0;
 
     // Clear editor params if editor is initialized
     if (editorInstanceRef.current) {
@@ -218,17 +223,39 @@ export function Workspace({
       return;
     }
 
+    // Always update the ref to store latest params
+    paramsRef.current = params;
+
     // When positions are updated due to code edits, update the code state
     // but don't update previewCode or multiplesCode - those only update when user explicitly runs or drags slider
     // This prevents the preview and multiples from automatically rerunning on every code edit
     if (type === "position-update" && code !== undefined) {
       setCode(code);
+      // Update multiplesCode if we're selecting from multiples to keep it in sync
+      if (isSelectingFromMultiplesRef.current) {
+        setMultiplesCode(code);
+        // Also update params state to ensure positions match
+        setParams(params);
+      }
+      // Don't update params state on position updates - only update on run button
+      return;
     }
 
-    setParams(params);
     if (type === "params-update" && !isSelectingFromMultiplesRef.current) {
-      setShowMultiples(params.length > 0);
+      // Read previous length from ref before updating
+      const prevLength = prevParamsLengthRef.current;
+      setParams(params);
+
+      // Switch to multiples when params are added (length increases)
+      // Don't switch if params already existed and user is just editing code
+      const paramsWereAdded = params.length > prevLength;
+      if (paramsWereAdded) {
+        setShowMultiples(true);
+      }
     }
+
+    // Update ref after checking
+    prevParamsLengthRef.current = params.length;
 
     // Update ranges when params change - initialize missing ranges with defaults
     setRanges((prevRanges) => {
@@ -255,23 +282,39 @@ export function Workspace({
     });
   }, []);
 
-  const onSelect = useCallback(
-    ({code, values}) => {
-      if (!editorInstanceRef.current || params.length === 0) return;
-      isSelectingFromMultiplesRef.current = true;
-      editorInstanceRef.current.update(params, values);
-      setCode(code);
-      setPreviewCode(code);
-      setMultiplesCode(code); // Update multiples code when selecting from multiples
-      setHasNewCodeToRun(false);
-      setShowMultiples(false);
-      // Reset the flag after a short delay to allow any pending updates to complete
+  const onSelect = useCallback(({code, values}) => {
+    // Get current params from editor to ensure we have the latest positions
+    if (!editorInstanceRef.current) return;
+    const currentParams = editorInstanceRef.current.getParams();
+    if (currentParams.length === 0) return;
+
+    isSelectingFromMultiplesRef.current = true;
+    editorInstanceRef.current.update(currentParams, values);
+
+    // The editor will trigger onParamsChange with updated positions
+    // We'll update multiplesCode there, but set the immediate state here
+    setCode(code);
+    setPreviewCode(code);
+    setHasNewCodeToRun(false);
+    setShowMultiples(false);
+
+    // Wait for params to be updated via onParamsChange, then sync multiplesCode
+    setTimeout(() => {
+      if (editorInstanceRef.current) {
+        const updatedCode = editorInstanceRef.current.getCode();
+        const updatedParams = editorInstanceRef.current.getParams();
+        setMultiplesCode(updatedCode);
+        if (updatedParams.length > 0) {
+          paramsRef.current = updatedParams;
+          setParams(updatedParams);
+        }
+      }
+      // Reset the flag after params are updated
       setTimeout(() => {
         isSelectingFromMultiplesRef.current = false;
-      }, 100);
-    },
-    [params]
-  );
+      }, 50);
+    }, 100);
+  }, []);
 
   // Destroy editor when showing whiteboard, reinitialize when hiding whiteboard
   useEffect(() => {
@@ -319,7 +362,9 @@ export function Workspace({
             editorInstanceRef.current.setParams(version.params.definitions);
           }
         }, 0);
+        paramsRef.current = version.params.definitions;
         setParams(version.params.definitions);
+        prevParamsLengthRef.current = version.params.definitions.length;
         setRanges(version.params.ranges || {});
         setShowMultiples(true);
       } else {
@@ -329,7 +374,9 @@ export function Workspace({
             editorInstanceRef.current.setParams([]);
           }
         }, 0);
+        paramsRef.current = [];
         setParams([]);
+        prevParamsLengthRef.current = 0;
         setRanges({});
         setShowMultiples(false);
       }
@@ -357,7 +404,9 @@ export function Workspace({
             editorInstanceRef.current.setParams(version.params.definitions);
           }
         }, 0);
+        paramsRef.current = version.params.definitions;
         setParams(version.params.definitions);
+        prevParamsLengthRef.current = version.params.definitions.length;
         setRanges(version.params.ranges || {});
         setShowMultiples(true);
         loadedParamsForVersionRef.current = currentVersionId;
@@ -368,7 +417,9 @@ export function Workspace({
             editorInstanceRef.current.setParams([]);
           }
         }, 0);
+        paramsRef.current = [];
         setParams([]);
+        prevParamsLengthRef.current = 0;
         setRanges({});
         setShowMultiples(false);
         loadedParamsForVersionRef.current = currentVersionId;
@@ -399,13 +450,16 @@ export function Workspace({
           const version = savedVersions.find((v) => v.id === currentVersionId);
           if (version && version.params && version.params.definitions && version.params.definitions.length > 0) {
             editorInstanceRef.current.setParams(version.params.definitions);
+            paramsRef.current = version.params.definitions;
             setParams(version.params.definitions);
+            prevParamsLengthRef.current = version.params.definitions.length;
             setRanges(version.params.ranges || {});
             setShowMultiples(true);
             loadedParamsForVersionRef.current = currentVersionId;
           } else {
             // Clear params if version doesn't have them
             editorInstanceRef.current.setParams([]);
+            paramsRef.current = [];
             setParams([]);
             setRanges({});
             setShowMultiples(false);
@@ -422,6 +476,7 @@ export function Workspace({
         // No version selected, clear params
         if (loadedParamsForVersionRef.current !== null) {
           editorInstanceRef.current.setParams([]);
+          paramsRef.current = [];
           setParams([]);
           setRanges({});
           setShowMultiples(false);
@@ -485,6 +540,8 @@ export function Workspace({
       setCode(currentCode);
       setPreviewCode(currentCode);
       setMultiplesCode(currentCode); // Update multiples code when explicitly run
+      // Update params state from ref when run button is clicked
+      setParams(paramsRef.current);
       setHasNewCodeToRun(false);
     }
   }, []);
@@ -544,6 +601,14 @@ export function Workspace({
     if (isExample) return; // Don't save examples directly
 
     const currentCode = editorInstanceRef.current.getCode();
+
+    // Safeguard: Infer sketch type from code if it's WebGL
+    let actualSketchType = sketchType;
+    if (currentCode?.trim().startsWith("#version") && sketchType !== "webgl2") {
+      actualSketchType = "webgl2";
+      setSketchType("webgl2");
+    }
+
     let currentSketchId = sketchId;
 
     // If no sketch ID, create a new sketch first
@@ -553,7 +618,7 @@ export function Workspace({
       await saveSketch({
         id: currentSketchId,
         name: newSketchName,
-        type: sketchType,
+        type: actualSketchType,
         timestamp: new Date().toISOString(),
         versions: [],
         selectedVersion: null,
@@ -629,9 +694,9 @@ export function Workspace({
           nextVersionId: 0,
         });
       } else {
-        // Update sketch type if it changed
-        if (currentSketch.type !== sketchType) {
-          currentSketch.type = sketchType;
+        // Always ensure sketch type is set and up to date
+        if (!currentSketch.type || currentSketch.type !== actualSketchType) {
+          currentSketch.type = actualSketchType;
           await saveSketch(currentSketch);
         }
       }
@@ -804,12 +869,15 @@ export function Workspace({
         // Restore params and ranges if the version has them
         if (version.params && version.params.definitions && version.params.definitions.length > 0) {
           editorInstanceRef.current.setParams(version.params.definitions);
+          paramsRef.current = version.params.definitions;
           setParams(version.params.definitions);
+          prevParamsLengthRef.current = version.params.definitions.length;
           setRanges(version.params.ranges || {});
           setShowMultiples(true);
         } else {
           // Clear params in editor and state when version has no params
           editorInstanceRef.current.setParams([]);
+          paramsRef.current = [];
           setParams([]);
           setRanges({});
           setShowMultiples(false);
@@ -964,6 +1032,26 @@ export function Workspace({
     setShowWhiteboard(false);
   }, []);
 
+  const handleToggleMultiples = useCallback((show) => {
+    // When switching to multiples view, ensure multiplesCode and params are synced with editor
+    if (show && editorInstanceRef.current) {
+      // Use requestAnimationFrame to ensure editor state is fully updated
+      requestAnimationFrame(() => {
+        if (editorInstanceRef.current) {
+          const currentEditorCode = editorInstanceRef.current.getCode();
+          const currentEditorParams = editorInstanceRef.current.getParams();
+          setMultiplesCode(currentEditorCode);
+          // Update params from editor to ensure positions match the current code
+          if (currentEditorParams.length > 0) {
+            paramsRef.current = currentEditorParams;
+            setParams(currentEditorParams);
+          }
+        }
+      });
+    }
+    setShowMultiples(show);
+  }, []);
+
   const handleSelectVersionFromWhiteboard = useCallback(
     (version) => {
       // Warn if there are unsaved changes
@@ -1039,7 +1127,7 @@ export function Workspace({
           cellSize={cellSize}
           onCellSizeChange={setCellSize}
           sketchType={sketchType}
-          onToggleMultiples={setShowMultiples}
+          onToggleMultiples={handleToggleMultiples}
           onSelect={onSelect}
           sketchId={sketchId}
           currentVersionId={currentVersionId}

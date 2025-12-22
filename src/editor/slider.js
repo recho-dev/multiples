@@ -7,6 +7,11 @@ import {getNumberRegex} from "./regex.js";
 // Define a annotation to label the slider change transaction.
 export const ANNO_SLIDER_UPDATE = Annotation.define();
 
+// Generate a unique ID for params (same as uid function in Workspace)
+function generateParamUid() {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
 // Define a facet to provide the params change callback.
 const paramsFacet = Facet.define({combine: (values) => values[0] || (() => {})});
 
@@ -98,11 +103,11 @@ const numberSliderPlugin = ViewPlugin.fromClass(
 
       if (paramsUpdated) {
         // Trigger onParamsChange when params are set externally
-        this.onParamsChange({
-          params: this.params,
-          code: this.view.state.doc.toString(),
-          type: "params-update",
-        });
+        // this.onParamsChange({
+        //   params: this.params,
+        //   code: this.view.state.doc.toString(),
+        //   type: "params-update",
+        // });
       }
 
       if (update.docChanged) {
@@ -134,7 +139,15 @@ const numberSliderPlugin = ViewPlugin.fromClass(
 
         // Check if it's still a valid number (not part of an identifier).
         const numberRegex = getNumberRegex();
-        if (numberRegex.test(text)) newParams.push({from: newFrom, to: newTo, value: text});
+        if (numberRegex.test(text)) {
+          // Preserve uid when updating positions, or generate one if missing (backward compatibility)
+          newParams.push({
+            uid: param.uid || generateParamUid(),
+            from: newFrom,
+            to: newTo,
+            value: text,
+          });
+        }
 
         // Otherwise, the param was deleted or modified, so  skip it
       }
@@ -198,16 +211,32 @@ const numberSliderPlugin = ViewPlugin.fromClass(
         const diff = formattedValue.length - this.activeNumber.value.length;
         this.activeNumber.to += diff;
         this.activeNumber.value = formattedValue;
+        this.onParamsChange({
+          params: this.params,
+          code: this.view.state.doc.toString(),
+          type: "params-update",
+        });
       };
 
       const onClose = () => this.closePopup();
 
       const onCheckboxChange = (checked) => {
         if (checked) {
-          const param = {from: number.from, to: number.to, value: number.value};
+          const param = {
+            uid: generateParamUid(),
+            from: number.from,
+            to: number.to,
+            value: number.value,
+          };
           this.params.push(param);
         } else {
-          this.params = this.params.filter((p) => !(p.from === number.from && p.to === number.to));
+          // Find param by position to remove it
+          const paramToRemove = this.params.find(
+            (p) => p.from === number.from && p.to === number.to
+          );
+          if (paramToRemove) {
+            this.params = this.params.filter((p) => p.uid !== paramToRemove.uid);
+          }
         }
 
         this.params = [...this.params];

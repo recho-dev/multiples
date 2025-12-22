@@ -16,22 +16,24 @@
           {
             "from": 10,
             "to": 11,
-            "value": "4"
+            "value": "4",
+            "uid": "yjjj4kavjjgwjzomhtbefo"
           },
           {
             "from": 23,
             "to": 24,
-            "value": "3"
+            "value": "3",
+            "uid": "tmkw01dlycd0yie33mun8c"
           }
         ],
         "ranges": {
-          "10-11": {
+          "yjjj4kavjjgwjzomhtbefo": {
             "start": "2",
             "end": "9",
             "count": "7",
             "type": "Int"
           },
-          "23-24": {
+          "tmkw01dlycd0yie33mun8c": {
             "start": "2",
             "end": "9",
             "count": "7",

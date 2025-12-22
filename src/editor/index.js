@@ -87,11 +87,16 @@ function createEditor(
     });
   }
 
+  function getParams() {
+    return editor.state.field(paramsStateField, false) || [];
+  }
+
   return {
     editor,
     destroy: () => editor.destroy(),
     update: handleUpdate,
     getCode: () => editor.state.doc.toString(),
+    getParams,
     setCode,
     setParams,
   };
