@@ -96,16 +96,24 @@ function generateXd(code, params, ranges, {count = 4} = {}) {
   const V1 = generateVariations(params[1].value, count, ranges[getParamKey(params[1])]);
   const V = d3.cross(V0, V1);
   const [, , ...Vs] = params;
+  const totalItems = count ** 2;
+
+  // For additional params, generate variations based on their own count,
+  // then repeat cyclically to match the total number of combinations
   const restV = Vs.map((v) => {
     const key = getParamKey(v);
     const range = ranges[key];
-    // For additional params, generate count ** 2 variations
-    // Preserve the range settings (start, end, type) but override count
-    const modifiedRange = range ? {...range, count: String(count ** 2)} : null;
-    const values = generateVariations(v.value, count ** 2, modifiedRange);
-    return values;
+    // Generate variations based on the param's own count (not count ** 2)
+    const values = generateVariations(v.value, count, range);
+
+    // Repeat values cyclically to match totalItems
+    const repeatedValues = [];
+    for (let i = 0; i < totalItems; i++) {
+      repeatedValues.push(values[i % values.length]);
+    }
+    return repeatedValues;
   });
-  const totalItems = count ** 2;
+
   for (let i = 0; i < totalItems; i++) {
     V[i].push(...restV.map((values) => values[i]));
   }
