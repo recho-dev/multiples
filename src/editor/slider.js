@@ -98,11 +98,11 @@ const numberSliderPlugin = ViewPlugin.fromClass(
 
       if (paramsUpdated) {
         // Trigger onParamsChange when params are set externally
-        this.onParamsChange({
-          params: this.params,
-          code: this.view.state.doc.toString(),
-          type: "params-update",
-        });
+        // this.onParamsChange({
+        //   params: this.params,
+        //   code: this.view.state.doc.toString(),
+        //   type: "params-update",
+        // });
       }
 
       if (update.docChanged) {
@@ -198,6 +198,11 @@ const numberSliderPlugin = ViewPlugin.fromClass(
         const diff = formattedValue.length - this.activeNumber.value.length;
         this.activeNumber.to += diff;
         this.activeNumber.value = formattedValue;
+        this.onParamsChange({
+          params: this.params,
+          code: this.view.state.doc.toString(),
+          type: "params-update",
+        });
       };
 
       const onClose = () => this.closePopup();

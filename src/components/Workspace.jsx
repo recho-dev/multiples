@@ -117,6 +117,7 @@ export function Workspace({
   const isSelectingFromMultiplesRef = useRef(false);
   const isSwitchingContextRef = useRef(false);
   const prevParamsLengthRef = useRef(0);
+  const paramsRef = useRef([]);
 
   // Update local state when props change
   useEffect(() => {
@@ -152,6 +153,7 @@ export function Workspace({
     isSwitchingContextRef.current = true;
 
     // Immediately clear params state to prevent stale params from showing
+    paramsRef.current = [];
     setParams([]);
     setRanges({});
     setShowMultiples(false);
@@ -220,18 +222,23 @@ export function Workspace({
       return;
     }
 
+    // Always update the ref to store latest params
+    paramsRef.current = params;
+
     // When positions are updated due to code edits, update the code state
     // but don't update previewCode or multiplesCode - those only update when user explicitly runs or drags slider
     // This prevents the preview and multiples from automatically rerunning on every code edit
     if (type === "position-update" && code !== undefined) {
       setCode(code);
+      // Don't update params state on position updates - only update on run button
+      return;
     }
 
-    // Read previous length from ref before updating
-    const prevLength = prevParamsLengthRef.current;
-    setParams(params);
-
     if (type === "params-update" && !isSelectingFromMultiplesRef.current) {
+      // Read previous length from ref before updating
+      const prevLength = prevParamsLengthRef.current;
+      setParams(params);
+
       // Switch to multiples when params are added (length increases)
       // Don't switch if params already existed and user is just editing code
       const paramsWereAdded = params.length > prevLength;
@@ -270,9 +277,11 @@ export function Workspace({
 
   const onSelect = useCallback(
     ({code, values}) => {
-      if (!editorInstanceRef.current || params.length === 0) return;
+      // Use ref to get latest params, or fall back to state
+      const currentParams = paramsRef.current.length > 0 ? paramsRef.current : params;
+      if (!editorInstanceRef.current || currentParams.length === 0) return;
       isSelectingFromMultiplesRef.current = true;
-      editorInstanceRef.current.update(params, values);
+      editorInstanceRef.current.update(currentParams, values);
       setCode(code);
       setPreviewCode(code);
       setMultiplesCode(code); // Update multiples code when selecting from multiples
@@ -332,6 +341,7 @@ export function Workspace({
             editorInstanceRef.current.setParams(version.params.definitions);
           }
         }, 0);
+        paramsRef.current = version.params.definitions;
         setParams(version.params.definitions);
         prevParamsLengthRef.current = version.params.definitions.length;
         setRanges(version.params.ranges || {});
@@ -343,6 +353,7 @@ export function Workspace({
             editorInstanceRef.current.setParams([]);
           }
         }, 0);
+        paramsRef.current = [];
         setParams([]);
         prevParamsLengthRef.current = 0;
         setRanges({});
@@ -372,6 +383,7 @@ export function Workspace({
             editorInstanceRef.current.setParams(version.params.definitions);
           }
         }, 0);
+        paramsRef.current = version.params.definitions;
         setParams(version.params.definitions);
         prevParamsLengthRef.current = version.params.definitions.length;
         setRanges(version.params.ranges || {});
@@ -384,6 +396,7 @@ export function Workspace({
             editorInstanceRef.current.setParams([]);
           }
         }, 0);
+        paramsRef.current = [];
         setParams([]);
         prevParamsLengthRef.current = 0;
         setRanges({});
@@ -424,6 +437,7 @@ export function Workspace({
           } else {
             // Clear params if version doesn't have them
             editorInstanceRef.current.setParams([]);
+            paramsRef.current = [];
             setParams([]);
             setRanges({});
             setShowMultiples(false);
@@ -440,6 +454,7 @@ export function Workspace({
         // No version selected, clear params
         if (loadedParamsForVersionRef.current !== null) {
           editorInstanceRef.current.setParams([]);
+          paramsRef.current = [];
           setParams([]);
           setRanges({});
           setShowMultiples(false);
@@ -503,6 +518,8 @@ export function Workspace({
       setCode(currentCode);
       setPreviewCode(currentCode);
       setMultiplesCode(currentCode); // Update multiples code when explicitly run
+      // Update params state from ref when run button is clicked
+      setParams(paramsRef.current);
       setHasNewCodeToRun(false);
     }
   }, []);
@@ -830,6 +847,7 @@ export function Workspace({
         // Restore params and ranges if the version has them
         if (version.params && version.params.definitions && version.params.definitions.length > 0) {
           editorInstanceRef.current.setParams(version.params.definitions);
+          paramsRef.current = version.params.definitions;
           setParams(version.params.definitions);
           prevParamsLengthRef.current = version.params.definitions.length;
           setRanges(version.params.ranges || {});
@@ -837,6 +855,7 @@ export function Workspace({
         } else {
           // Clear params in editor and state when version has no params
           editorInstanceRef.current.setParams([]);
+          paramsRef.current = [];
           setParams([]);
           setRanges({});
           setShowMultiples(false);
