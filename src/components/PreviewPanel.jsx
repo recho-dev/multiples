@@ -16,7 +16,7 @@ export function PreviewPanel({
   currentVersionId,
 }) {
   return (
-    <div className="h-full flex flex-col ml-4 mt-2 pb-4">
+    <div className="h-full flex flex-col px-4 py-2">
       <div className="flex gap-2 mb-2 flex-shrink-0">
         <span
           className={clsx("cursor-pointer", !showMultiples && "border-b-1")}
