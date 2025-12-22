@@ -380,7 +380,9 @@ export function Multiples({
               onClick={() => onSelect(multiple)}
             >
               <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
-              <span className="text-xs">{`(${multiple.values.map((v, idx) => `X${idx}=${v}`).join(", ")})`}</span>
+              <span className="text-xs whitespace-nowrap">{`(${multiple.values
+                .map((v, idx) => `X${idx}=${v}`)
+                .join(", ")})`}</span>
             </div>
           ))}
         </div>
@@ -398,7 +400,9 @@ export function Multiples({
               onClick={() => onSelect(multiple)}
             >
               <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
-              <span className="text-xs">{`(${multiple.values.map((v, idx) => `X${idx}=${v}`).join(", ")})`}</span>
+              <span className="text-xs whitespace-nowrap">{`(${multiple.values
+                .map((v, idx) => `X${idx}=${v}`)
+                .join(", ")})`}</span>
             </div>
           ))}
         </div>
