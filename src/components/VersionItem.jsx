@@ -48,10 +48,10 @@ export const VersionItem = forwardRef(function VersionItem(
     <div
       ref={ref}
       className={clsx(
-        "rounded cursor-pointer transition-all border-2 overflow-hidden group relative",
+        "rounded cursor-pointer transition-all border-2 overflow-hidden group relative border-gray-200",
         isCurrent
-          ? "bg-blue-50 border-blue-600 shadow-md ring-2 ring-blue-400"
-          : "border-transparent hover:border-gray-300 hover:bg-gray-50"
+          ? "bg-blue-50 border-blue-600 ring-2 ring-blue-400"
+          : "hover:border-gray-300 hover:bg-gray-50"
       )}
       title={version.code.substring(0, 50) + "..."}
     >
