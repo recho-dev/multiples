@@ -116,6 +116,7 @@ export function Workspace({
   const loadedParamsForVersionRef = useRef(null);
   const isSelectingFromMultiplesRef = useRef(false);
   const isSwitchingContextRef = useRef(false);
+  const prevParamsLengthRef = useRef(0);
 
   // Update local state when props change
   useEffect(() => {
@@ -154,6 +155,7 @@ export function Workspace({
     setParams([]);
     setRanges({});
     setShowMultiples(false);
+    prevParamsLengthRef.current = 0;
 
     // Clear editor params if editor is initialized
     if (editorInstanceRef.current) {
@@ -225,10 +227,21 @@ export function Workspace({
       setCode(code);
     }
 
+    // Read previous length from ref before updating
+    const prevLength = prevParamsLengthRef.current;
     setParams(params);
+
     if (type === "params-update" && !isSelectingFromMultiplesRef.current) {
-      setShowMultiples(params.length > 0);
+      // Switch to multiples when params are added (length increases)
+      // Don't switch if params already existed and user is just editing code
+      const paramsWereAdded = params.length > prevLength;
+      if (paramsWereAdded) {
+        setShowMultiples(true);
+      }
     }
+
+    // Update ref after checking
+    prevParamsLengthRef.current = params.length;
 
     // Update ranges when params change - initialize missing ranges with defaults
     setRanges((prevRanges) => {
@@ -320,6 +333,7 @@ export function Workspace({
           }
         }, 0);
         setParams(version.params.definitions);
+        prevParamsLengthRef.current = version.params.definitions.length;
         setRanges(version.params.ranges || {});
         setShowMultiples(true);
       } else {
@@ -330,6 +344,7 @@ export function Workspace({
           }
         }, 0);
         setParams([]);
+        prevParamsLengthRef.current = 0;
         setRanges({});
         setShowMultiples(false);
       }
@@ -358,6 +373,7 @@ export function Workspace({
           }
         }, 0);
         setParams(version.params.definitions);
+        prevParamsLengthRef.current = version.params.definitions.length;
         setRanges(version.params.ranges || {});
         setShowMultiples(true);
         loadedParamsForVersionRef.current = currentVersionId;
@@ -369,6 +385,7 @@ export function Workspace({
           }
         }, 0);
         setParams([]);
+        prevParamsLengthRef.current = 0;
         setRanges({});
         setShowMultiples(false);
         loadedParamsForVersionRef.current = currentVersionId;
@@ -400,6 +417,7 @@ export function Workspace({
           if (version && version.params && version.params.definitions && version.params.definitions.length > 0) {
             editorInstanceRef.current.setParams(version.params.definitions);
             setParams(version.params.definitions);
+            prevParamsLengthRef.current = version.params.definitions.length;
             setRanges(version.params.ranges || {});
             setShowMultiples(true);
             loadedParamsForVersionRef.current = currentVersionId;
@@ -813,6 +831,7 @@ export function Workspace({
         if (version.params && version.params.definitions && version.params.definitions.length > 0) {
           editorInstanceRef.current.setParams(version.params.definitions);
           setParams(version.params.definitions);
+          prevParamsLengthRef.current = version.params.definitions.length;
           setRanges(version.params.ranges || {});
           setShowMultiples(true);
         } else {
