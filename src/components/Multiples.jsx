@@ -80,7 +80,8 @@ function generateVariations(value, defaultCount, customRange = null) {
 }
 
 function getParamKey(param) {
-  return `${param.from}-${param.to}`;
+  // Use uid if available, fallback to from-to for backward compatibility
+  return param.uid || `${param.from}-${param.to}`;
 }
 
 function generateXd(code, params, ranges, {count = 4} = {}) {

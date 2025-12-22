@@ -30,7 +30,8 @@ function generateFriendlyName() {
 }
 
 function getParamKey(param) {
-  return `${param.from}-${param.to}`;
+  // Use uid if available, fallback to from-to for backward compatibility
+  return param.uid || `${param.from}-${param.to}`;
 }
 
 function getDefaultRange(value, defaultCount = 4) {
@@ -429,6 +430,7 @@ export function Workspace({
           const version = savedVersions.find((v) => v.id === currentVersionId);
           if (version && version.params && version.params.definitions && version.params.definitions.length > 0) {
             editorInstanceRef.current.setParams(version.params.definitions);
+            paramsRef.current = version.params.definitions;
             setParams(version.params.definitions);
             prevParamsLengthRef.current = version.params.definitions.length;
             setRanges(version.params.ranges || {});

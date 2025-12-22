@@ -15,22 +15,24 @@
           {
             "from": 118,
             "to": 120,
-            "value": "60"
+            "value": "60",
+            "uid": "p9iduibshf8hwjm9jxevdd"
           },
           {
             "from": 190,
             "to": 192,
-            "value": "10"
+            "value": "10",
+            "uid": "rtmfphw4o9peaoiaq062nc"
           }
         ],
         "ranges": {
-          "118-120": {
+          "p9iduibshf8hwjm9jxevdd": {
             "start": "30.00",
             "end": "60.00",
             "count": "4",
             "type": "Float"
           },
-          "190-192": {
+          "rtmfphw4o9peaoiaq062nc": {
             "start": "5.00",
             "end": "20.00",
             "count": "4",
@@ -51,22 +53,24 @@
           {
             "from": 511,
             "to": 515,
-            "value": "9.00"
+            "value": "9.00",
+            "uid": "eqybv76jsqyspobl97o3"
           },
           {
             "from": 556,
             "to": 560,
-            "value": "3.00"
+            "value": "3.00",
+            "uid": "vy6eqtvdpukcem8hrj91fj"
           }
         ],
         "ranges": {
-          "511-515": {
+          "eqybv76jsqyspobl97o3": {
             "start": "3",
             "end": "12",
             "count": "4",
             "type": "Float"
           },
-          "556-560": {
+          "vy6eqtvdpukcem8hrj91fj": {
             "start": "3",
             "end": "12",
             "count": "4",
@@ -87,22 +91,24 @@
           {
             "from": 239,
             "to": 244,
-            "value": "66.67"
+            "value": "66.67",
+            "uid": "4siswevn68ugm79tgh8nnp"
           },
           {
             "from": 366,
             "to": 371,
-            "value": "33.33"
+            "value": "33.33",
+            "uid": "zqxxhr8xtnddd4m8vzbzkp"
           }
         ],
         "ranges": {
-          "239-244": {
+          "4siswevn68ugm79tgh8nnp": {
             "start": "0",
             "end": "100",
             "count": "4",
             "type": "Float"
           },
-          "366-371": {
+          "zqxxhr8xtnddd4m8vzbzkp": {
             "start": "0",
             "end": "100",
             "count": "4",
