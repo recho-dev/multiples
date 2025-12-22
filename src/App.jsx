@@ -6,6 +6,7 @@ import {Header} from "./components/Header.jsx";
 import {Workspace} from "./components/Workspace.jsx";
 import {OpenSketchModal} from "./components/OpenSketchModal.jsx";
 import {ExamplesModal} from "./components/ExamplesModal.jsx";
+import {examples} from "./examples/index.js";
 
 const initialCodeP5 = `p.setup = () => {
   p.createCanvas(400, 400);
@@ -73,11 +74,8 @@ function SketchEditor() {
         // If it's an example route, load from examples
         if (type === "example") {
           try {
-            const exampleModules = import.meta.glob("./examples/*.json", {eager: true});
-            const examples = Object.values(exampleModules).map((module) => {
-              return module.default || module;
-            });
-            sketch = examples.find((ex) => ex.id === id);
+            const exampleEntry = examples.find((ex) => ex.data.id === id);
+            sketch = exampleEntry?.data;
           } catch (e) {
             console.error("Failed to load examples:", e);
           }
@@ -236,10 +234,6 @@ function SketchEditor() {
 
   const handleExamples = useCallback(async () => {
     try {
-      const exampleModules = import.meta.glob("./examples/*.json", {eager: true});
-      const examples = Object.values(exampleModules).map((module) => {
-        return module.default || module;
-      });
       setAvailableExamples(examples);
       setShowExamplesModal(true);
     } catch (error) {
