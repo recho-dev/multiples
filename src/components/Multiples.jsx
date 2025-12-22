@@ -89,10 +89,18 @@ function generateXd(code, params, ranges, {count = 4} = {}) {
   const V = d3.cross(V0, V1);
   const [, , ...Vs] = params;
   const restV = Vs.map((v) => {
-    const values = generateVariations(v.value, count ** 2, ranges[getParamKey(v)]);
+    const key = getParamKey(v);
+    const range = ranges[key];
+    // For additional params, generate count ** 2 variations
+    // Preserve the range settings (start, end, type) but override count
+    const modifiedRange = range ? {...range, count: String(count ** 2)} : null;
+    const values = generateVariations(v.value, count ** 2, modifiedRange);
     return values;
   });
-  for (let i = 0; i < count ** 2; i++) V[i].push(...restV.map((v) => v[i]));
+  const totalItems = count ** 2;
+  for (let i = 0; i < totalItems; i++) {
+    V[i].push(...restV.map((values) => values[i]));
+  }
   return replaceValues(V, code, params);
 }
 
