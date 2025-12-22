@@ -124,28 +124,42 @@ export function Multiples({
   params,
   ranges: initialRanges = {},
   onRangesChange,
+  cellSize: initialCellSize = 200,
+  onCellSizeChange,
   sketchType = "p5",
   onSelect,
   sketchId,
   currentVersionId,
 }) {
   const cols = 4;
-  const [sketchSize, setSketchSize] = useState(200);
-  const [sliderValue, setSliderValue] = useState(200);
+  const [sketchSize, setSketchSize] = useState(initialCellSize);
+  const [sliderValue, setSliderValue] = useState(initialCellSize);
   const skipNotificationRef = useRef(false);
   const prevInitialRangesRef = useRef(JSON.stringify(initialRanges));
   const debounceTimeoutRef = useRef(null);
 
+  // Update sketch size when initialCellSize changes (e.g., when loading a version)
+  useEffect(() => {
+    setSketchSize(initialCellSize);
+    setSliderValue(initialCellSize);
+  }, [initialCellSize]);
+
   // Debounced function to update sketch size
-  const debouncedSetSketchSize = useCallback((value) => {
-    setSliderValue(value); // Update slider immediately for visual feedback
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    debounceTimeoutRef.current = setTimeout(() => {
-      setSketchSize(value);
-    }, 150);
-  }, []);
+  const debouncedSetSketchSize = useCallback(
+    (value) => {
+      setSliderValue(value); // Update slider immediately for visual feedback
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      debounceTimeoutRef.current = setTimeout(() => {
+        setSketchSize(value);
+        if (onCellSizeChange) {
+          onCellSizeChange(value);
+        }
+      }, 150);
+    },
+    [onCellSizeChange]
+  );
 
   // Initialize range settings for each param, using initialRanges if provided
   const [ranges, setRanges] = useState(() => {
@@ -284,7 +298,7 @@ export function Multiples({
     <div>
       <div className="mb-4">
         <label className="flex items-center gap-2 text-xs">
-          <span>Cell Width:</span>
+          <span>Cell Size:</span>
           <input
             type="range"
             min="50"

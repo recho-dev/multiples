@@ -101,6 +101,7 @@ export function Workspace({
   const [hasNewCodeToSave, setHasNewCodeToSave] = useState(false);
   const [params, setParams] = useState([]);
   const [ranges, setRanges] = useState({});
+  const [cellSize, setCellSize] = useState(200);
   const [showMultiples, setShowMultiples] = useState(false);
   const [savedVersions, setSavedVersions] = useState(initialVersions);
   const [currentVersionId, setCurrentVersionId] = useState(initialVersionId);
@@ -332,6 +333,12 @@ export function Workspace({
         setRanges({});
         setShowMultiples(false);
       }
+      // Restore cell size if the version has it
+      if (version.cellSize !== undefined) {
+        setCellSize(version.cellSize);
+      } else {
+        setCellSize(200); // Default value
+      }
       loadedParamsForVersionRef.current = version.id;
 
       if (!isExample && sketchId) {
@@ -366,6 +373,12 @@ export function Workspace({
         setShowMultiples(false);
         loadedParamsForVersionRef.current = currentVersionId;
       }
+      // Restore cell size if the version has it
+      if (version && version.cellSize !== undefined) {
+        setCellSize(version.cellSize);
+      } else {
+        setCellSize(200); // Default value
+      }
     }
 
     return () => {
@@ -397,6 +410,12 @@ export function Workspace({
             setRanges({});
             setShowMultiples(false);
             loadedParamsForVersionRef.current = currentVersionId;
+          }
+          // Restore cell size if the version has it
+          if (version && version.cellSize !== undefined) {
+            setCellSize(version.cellSize);
+          } else {
+            setCellSize(200); // Default value
           }
         }
       } else {
@@ -438,7 +457,8 @@ export function Workspace({
             currentVersion.params?.definitions || [],
             currentVersion.params?.ranges || {}
           );
-          needsSave = codeChanged || paramsChanged;
+          const cellSizeChanged = (currentVersion.cellSize || 200) !== cellSize;
+          needsSave = codeChanged || paramsChanged || cellSizeChanged;
         } else {
           const codeChanged = currentEditorCode !== providedInitialCode;
           const paramsChanged = params.length > 0 || Object.keys(ranges).length > 0;
@@ -554,7 +574,8 @@ export function Workspace({
           currentVersion.params?.definitions || [],
           currentVersion.params?.ranges || {}
         );
-        if (!codeChanged && !paramsChanged) {
+        const cellSizeChanged = (currentVersion.cellSize || 200) !== cellSize;
+        if (!codeChanged && !paramsChanged && !cellSizeChanged) {
           return;
         }
 
@@ -573,6 +594,7 @@ export function Workspace({
                   },
                 }
               : {}),
+            cellSize,
           };
 
           await saveVersion(currentSketchId, updatedVersion);
@@ -645,6 +667,7 @@ export function Workspace({
               },
             }
           : {}),
+        cellSize,
       };
 
       await saveSketch(currentSketch);
@@ -734,6 +757,7 @@ export function Workspace({
               },
             }
           : {}),
+        cellSize,
       };
 
       await saveSketch(currentSketch);
@@ -787,6 +811,12 @@ export function Workspace({
           setParams([]);
           setRanges({});
           setShowMultiples(false);
+        }
+        // Restore cell size if the version has it
+        if (version.cellSize !== undefined) {
+          setCellSize(version.cellSize);
+        } else {
+          setCellSize(200); // Default value
         }
         loadedParamsForVersionRef.current = version.id;
 
@@ -1004,6 +1034,8 @@ export function Workspace({
           params={params}
           ranges={ranges}
           onRangesChange={setRanges}
+          cellSize={cellSize}
+          onCellSizeChange={setCellSize}
           sketchType={sketchType}
           onToggleMultiples={setShowMultiples}
           onSelect={onSelect}
