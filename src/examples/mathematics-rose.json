@@ -1,0 +1,47 @@
+{
+  "id": "qkaarpzbi1v3jr11ztdrg",
+  "name": "Mathematics Rose",
+  "type": "p5",
+  "timestamp": "2025-12-21T23:31:01.793Z",
+  "versions": [
+    {
+      "id": "0",
+      "parentId": null,
+      "timestamp": "2025-12-22T00:47:57.026Z",
+      "time": "12/21/2025, 7:47:57 PM",
+      "name": "7x7",
+      "code": "const n = 4;\nconst d = 3;\n\np.setup = () => {\n  p.createCanvas(400, 400);\n  p.translate(p.width / 2, p.height / 2);\n  p.background(0);\n  const k = n / d;\n  const m = reduceDenominator(n, d);\n  const points = [];\n  const r = p.width / 2 * 0.8;\n  p.beginShape();\n  p.noFill();\n  p.stroke(255);\n  p.strokeWeight(2);\n  for (let a = 0; a < Math.PI * 2 * m + 0.02; a += 0.02) {\n    const r1 = r * Math.cos(k * a);\n    const x = r1 * Math.cos(a);\n    const y = r1 * Math.sin(a);\n    p.vertex(x, y);\n  }\n  p.endShape();\n};\n\nfunction reduceDenominator(numerator, denominator) {\n  function rec(a, b) {\n    return b ? rec(b, a % b) : a;\n  }\n  return denominator / rec(numerator, denominator);\n}",
+      "params": {
+        "definitions": [
+          {
+            "from": 10,
+            "to": 11,
+            "value": "4"
+          },
+          {
+            "from": 23,
+            "to": 24,
+            "value": "3"
+          }
+        ],
+        "ranges": {
+          "10-11": {
+            "start": "2",
+            "end": "9",
+            "count": "7",
+            "type": "Int"
+          },
+          "23-24": {
+            "start": "2",
+            "end": "9",
+            "count": "7",
+            "type": "Int"
+          }
+        }
+      },
+      "cellSize": 100
+    }
+  ],
+  "selectedVersion": "0",
+  "nextVersionId": 1
+}
