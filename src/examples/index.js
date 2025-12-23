@@ -3,6 +3,7 @@ import fractalTree from "./fractal-tree.json";
 import itpWinterShow2025Trees from "./itp-winter-show-2025-trees.json";
 import mathematicsRose from "./mathematics-rose.json";
 import beesandbombs from "./beesandbombs.json";
+import twistedPorcelain from "./twisted-porcelain.json";
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -31,6 +32,11 @@ export const examples = [
     group: "WebGL2 Shader",
     data: beesandbombs,
     img: `${BASE_URL}beesandbombs.png`,
+  },
+  {
+    group: "WebGL2 Shader",
+    data: twistedPorcelain,
+    img: `${BASE_URL}twisted-porcelain.png`,
   },
 ];
 
