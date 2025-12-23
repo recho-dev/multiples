@@ -60,6 +60,12 @@ export function Whiteboard({versions, onClose, onSelectVersion}) {
   const [hoveredSketchId, setHoveredSketchId] = useState(null);
   const [selectedSketchId, setSelectedSketchId] = useState(null);
 
+  // Detect if running on Mac
+  const isMac =
+    typeof navigator !== "undefined" &&
+    (navigator.platform.toUpperCase().indexOf("MAC") >= 0 || navigator.userAgent.toUpperCase().indexOf("MAC") >= 0);
+  const modifierKey = isMac ? "⌘" : "Ctrl";
+
   const calculateLayout = useCallback(() => {
     if (versions.length === 0 || !containerRef.current) return;
 
@@ -332,6 +338,7 @@ export function Whiteboard({versions, onClose, onSelectVersion}) {
         >
           Close Whiteboard
         </button>
+        <span className="text-sm text-gray-600 px-2">{modifierKey} + click to change position</span>
         {selectedSketchId && (
           <button
             onClick={handleSelectVersion}
