@@ -338,7 +338,7 @@ export function Multiples({
             <span>Cell Size:</span>
             <input
               type="range"
-              min="50"
+              min="25"
               max="400"
               step="10"
               value={sliderValue}
