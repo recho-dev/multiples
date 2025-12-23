@@ -35,7 +35,7 @@ export function Header({
       {!isFullscreen && (
         <button
           onClick={onFullscreen}
-          className="absolute top-2 right-4 p-2 text-white hover:bg-gray-800 rounded transition-colors"
+          className="absolute top-2 right-4 p-2 text-white hover:bg-gray-800 rounded transition-colors cursor-pointer"
           title="Enter fullscreen"
           aria-label="Enter fullscreen"
         >
@@ -52,7 +52,7 @@ export function Header({
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowNewDropdown(!showNewDropdown)}
-              className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm"
+              className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm cursor-pointer"
               title="New Sketch"
             >
               New
@@ -61,13 +61,13 @@ export function Header({
               <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-[160px]">
                 <button
                   onClick={() => handleNewSketchSelect("p5")}
-                  className="w-full text-left px-3 py-2 text-white hover:bg-gray-700 text-sm block"
+                  className="w-full text-left px-3 py-2 text-white hover:bg-gray-700 text-sm block cursor-pointer"
                 >
                   p5
                 </button>
                 <button
                   onClick={() => handleNewSketchSelect("webgl2")}
-                  className="w-full text-left px-3 py-2 text-white hover:bg-gray-700 text-sm block"
+                  className="w-full text-left px-3 py-2 text-white hover:bg-gray-700 text-sm block cursor-pointer"
                 >
                   WebGL2 Shader
                 </button>
@@ -76,14 +76,14 @@ export function Header({
           </div>
           <button
             onClick={onOpenSketch}
-            className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm"
+            className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm cursor-pointer"
             title="Open Sketch"
           >
             Open
           </button>
           <button
             onClick={onExamples}
-            className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm"
+            className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm cursor-pointer"
             title="Examples"
           >
             Examples
@@ -91,7 +91,7 @@ export function Header({
           {hasVersions && (
             <button
               onClick={onDownloadAll}
-              className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm"
+              className="px-3 py-1.5 text-white hover:bg-gray-800 rounded transition-colors text-sm cursor-pointer"
               title="Download all versions"
             >
               Download

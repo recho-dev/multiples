@@ -2,6 +2,7 @@ import cardioidVisualization from "./cardioid-visualization.json";
 import fractalTree from "./fractal-tree.json";
 import itpWinterShow2025Trees from "./itp-winter-show-2025-trees.json";
 import mathematicsRose from "./mathematics-rose.json";
+import beesandbombs from "./beesandbombs.json";
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -25,6 +26,11 @@ export const examples = [
     group: "Showcase",
     data: itpWinterShow2025Trees,
     img: `${BASE_URL}itp-winter-show-2025-trees.png`,
+  },
+  {
+    group: "WebGL2 Shader",
+    data: beesandbombs,
+    img: `${BASE_URL}beesandbombs.png`,
   },
 ];
 

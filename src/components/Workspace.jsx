@@ -103,6 +103,7 @@ export function Workspace({
   const [params, setParams] = useState([]);
   const [ranges, setRanges] = useState({});
   const [cellSize, setCellSize] = useState(200);
+  const [showLabels, setShowLabels] = useState(true);
   const [showMultiples, setShowMultiples] = useState(false);
   const [savedVersions, setSavedVersions] = useState(initialVersions);
   const [currentVersionId, setCurrentVersionId] = useState(initialVersionId);
@@ -386,6 +387,12 @@ export function Workspace({
       } else {
         setCellSize(200); // Default value
       }
+      // Restore showLabels if the version has it
+      if (version.showLabels !== undefined) {
+        setShowLabels(version.showLabels);
+      } else {
+        setShowLabels(true); // Default value
+      }
       loadedParamsForVersionRef.current = version.id;
 
       if (!isExample && sketchId) {
@@ -430,6 +437,12 @@ export function Workspace({
       } else {
         setCellSize(200); // Default value
       }
+      // Restore showLabels if the version has it
+      if (version && version.showLabels !== undefined) {
+        setShowLabels(version.showLabels);
+      } else {
+        setShowLabels(true); // Default value
+      }
     }
 
     return () => {
@@ -470,6 +483,12 @@ export function Workspace({
             setCellSize(version.cellSize);
           } else {
             setCellSize(200); // Default value
+          }
+          // Restore showLabels if the version has it
+          if (version && version.showLabels !== undefined) {
+            setShowLabels(version.showLabels);
+          } else {
+            setShowLabels(true); // Default value
           }
         }
       } else {
@@ -513,7 +532,8 @@ export function Workspace({
             currentVersion.params?.ranges || {}
           );
           const cellSizeChanged = (currentVersion.cellSize ?? 200) !== cellSize;
-          needsSave = codeChanged || paramsChanged || cellSizeChanged;
+          const showLabelsChanged = (currentVersion.showLabels ?? true) !== showLabels;
+          needsSave = codeChanged || paramsChanged || cellSizeChanged || showLabelsChanged;
         } else {
           const codeChanged = currentEditorCode !== providedInitialCode;
           const paramsChanged = params.length > 0 || Object.keys(ranges).length > 0;
@@ -523,7 +543,8 @@ export function Workspace({
         const codeChanged = currentEditorCode !== providedInitialCode;
         const paramsChanged = params.length > 0 || Object.keys(ranges).length > 0;
         const cellSizeChanged = cellSize !== 200; // Default is 200
-        needsSave = codeChanged || paramsChanged || cellSizeChanged;
+        const showLabelsChanged = showLabels !== true; // Default is true
+        needsSave = codeChanged || paramsChanged || cellSizeChanged || showLabelsChanged;
       }
       setHasNewCodeToSave(needsSave);
     };
@@ -532,7 +553,17 @@ export function Workspace({
     const interval = setInterval(checkEditorChanges, 500);
 
     return () => clearInterval(interval);
-  }, [previewCode, currentVersionId, savedVersions, showWhiteboard, params, ranges, providedInitialCode, cellSize]);
+  }, [
+    previewCode,
+    currentVersionId,
+    savedVersions,
+    showWhiteboard,
+    params,
+    ranges,
+    providedInitialCode,
+    cellSize,
+    showLabels,
+  ]);
 
   const handleRun = useCallback(() => {
     if (editorInstanceRef.current) {
@@ -641,7 +672,9 @@ export function Workspace({
           currentVersion.params?.ranges || {}
         );
         const cellSizeChanged = (currentVersion.cellSize ?? 200) !== cellSize;
-        if (!codeChanged && !paramsChanged && !cellSizeChanged) {
+        const showLabelsChanged = (currentVersion.showLabels ?? true) !== showLabels;
+        console.log("showLabelsChanged", showLabelsChanged, showLabels, currentVersion.showLabels);
+        if (!codeChanged && !paramsChanged && !cellSizeChanged && !showLabelsChanged) {
           return;
         }
 
@@ -661,8 +694,10 @@ export function Workspace({
                 }
               : {}),
             cellSize,
+            showLabels,
           };
 
+          console.log("Saving version with showLabels:", updatedVersion.showLabels, "Full version:", updatedVersion);
           await saveVersion(currentSketchId, updatedVersion);
 
           const sketch = await getSketch(currentSketchId);
@@ -734,6 +769,7 @@ export function Workspace({
             }
           : {}),
         cellSize,
+        showLabels,
       };
 
       await saveSketch(currentSketch);
@@ -765,6 +801,7 @@ export function Workspace({
     ranges,
     sketchType,
     cellSize,
+    showLabels,
   ]);
 
   const handleDuplicate = useCallback(async () => {
@@ -825,6 +862,7 @@ export function Workspace({
             }
           : {}),
         cellSize,
+        showLabels,
       };
 
       await saveSketch(currentSketch);
@@ -843,7 +881,18 @@ export function Workspace({
       console.error("Failed to duplicate version:", error);
       alert("Failed to duplicate version. Please try again.");
     }
-  }, [sketchId, currentVersionId, savedVersions, isExample, onVersionsChange, params, ranges, sketchType]);
+  }, [
+    sketchId,
+    currentVersionId,
+    savedVersions,
+    isExample,
+    onVersionsChange,
+    params,
+    ranges,
+    sketchType,
+    cellSize,
+    showLabels,
+  ]);
 
   const handleLoadVersion = useCallback(
     async (version) => {
@@ -887,6 +936,12 @@ export function Workspace({
           setCellSize(version.cellSize);
         } else {
           setCellSize(200); // Default value
+        }
+        // Restore showLabels if the version has it
+        if (version.showLabels !== undefined) {
+          setShowLabels(version.showLabels);
+        } else {
+          setShowLabels(true); // Default value
         }
         loadedParamsForVersionRef.current = version.id;
 
@@ -1100,6 +1155,7 @@ export function Workspace({
           versions={savedVersions}
           currentVersionId={currentVersionId}
           sidebarWidth={sidebarWidth}
+          sketchType={sketchType}
           onLoadVersion={handleLoadVersion}
           onDeleteVersion={handleDeleteVersion}
           onSaveVersionName={handleSaveVersionName}
@@ -1126,6 +1182,8 @@ export function Workspace({
           onRangesChange={setRanges}
           cellSize={cellSize}
           onCellSizeChange={setCellSize}
+          showLabels={showLabels}
+          onShowLabelsChange={setShowLabels}
           sketchType={sketchType}
           onToggleMultiples={handleToggleMultiples}
           onSelect={onSelect}

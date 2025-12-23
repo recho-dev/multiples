@@ -1,0 +1,198 @@
+{
+  "id": "d4by3co5xrqegub4yzz4nr",
+  "name": "Beesandbombs",
+  "type": "webgl2",
+  "timestamp": "2025-12-22T05:01:29.632Z",
+  "versions": [
+    {
+      "id": "6",
+      "parentId": "2",
+      "timestamp": "2025-12-23T00:03:56.525Z",
+      "time": "12/22/2025, 7:03:56 PM",
+      "name": "Beesandbombs",
+      "code": "#version 300 es\n#define PI 3.14159265359\nprecision highp float;\nuniform float uTime;\nin  vec3 vPos;\nout vec4 fragColor;\n\n// Ref. https://observablehq.com/d/94ac6e8018b5b3a1\n// Ref. https://observablehq.com/d/a741f9a27e8c0e73\n\nvoid main() {\n   float d = dot(vPos, vPos);\n   fragColor = vec4(0.,0.,0.,1.);\n   float row = 20.;\n   float i = 4.44;\n   float j = 4.44;\n   float step = 2./row;\n   float cx = -1. + i * step + step/2.;\n   float cy = -1. + j * step + step/2.;\n   float t0 = uTime / 2.;\n   if (d < .8) {\n      float l = length(vec2(cx, cy));\n      float theta = atan(cy, cx) / (PI * 2.);\n      float rotation = mod(l + theta - t0, 1.) * PI * -2.;\n      float cosa = cos(rotation);\n      float sina = sin(rotation);\n      vec3 dir = vec3(sina, cosa, sina + cosa);\n      vec3 p = vec3(vPos.xy, sqrt(1. - d));\n      float diffuse = .5 * max(0.,dot(dir, p));\n      float r = .5 + .5 * sin(i / row * PI * 2.);\n      float g = .5 + .5 * cos(j / row * PI * 2.);\n      float b = (r + g) / 2.;\n      float t = cos(rotation) * .5 + .5;\n      r = r * t + (1. - t) * 1.;\n      g = g * t + (1. - t) * 1.;\n      b = b * t + (1. - t) * 1.;\n      vec3 color = vec3(r, g, b);\n      fragColor = vec4(color * vec3(diffuse), 1.);\n   }\n}",
+      "params": {
+        "definitions": [
+          {
+            "uid": "wrj31nhnhcohatlv1v5typ",
+            "from": 337,
+            "to": 341,
+            "value": "4.44"
+          },
+          {
+            "uid": "lvripcmszonnceybb6956e",
+            "from": 356,
+            "to": 360,
+            "value": "4.44"
+          }
+        ],
+        "ranges": {
+          "wrj31nhnhcohatlv1v5typ": {
+            "start": "0",
+            "end": "20",
+            "count": "20",
+            "type": "Float"
+          },
+          "lvripcmszonnceybb6956e": {
+            "start": "0",
+            "end": "20",
+            "count": "20",
+            "type": "Float"
+          }
+        }
+      },
+      "cellSize": 35,
+      "showLabels": false
+    },
+    {
+      "id": "4",
+      "parentId": "3",
+      "timestamp": "2025-12-22T23:00:29.727Z",
+      "time": "12/22/2025, 6:00:29 PM",
+      "name": "Colored",
+      "code": "#version 300 es\nprecision highp float;\nuniform float uTime;\nin  vec3 vPos;\nout vec4 fragColor;\n\nvoid main() {\n   float t = uTime / 2.;\n   fragColor = vec4(0.,0.,0.,1.);\n   float r = .3 + .2 * sin(4. * t);\n   float x = vPos.x + .5 * sin(2.50 * t);\n   float y = vPos.y + .5 * cos(3.50 * t);\n   float z = sqrt(r * r - x * x - y* y);\n   vec3 p = vec3(x, y, z);\n   if (p.z > 0.) {\n     vec3 direction = vec3(1., 1., 1.);\n     float diffuse = max(0.,dot(direction, p));\n     vec3 color = vec3(1., 0.25, .5);\n     fragColor = vec4(vec3(diffuse) * color, 1.);\n   }\n}",
+      "params": {
+        "definitions": [
+          {
+            "uid": "sojcbczrzoq51y80ki7zs8",
+            "from": 236,
+            "to": 240,
+            "value": "2.50"
+          },
+          {
+            "uid": "s057vcr6xe6pnv7d3m36t",
+            "from": 278,
+            "to": 282,
+            "value": "3.50"
+          },
+          {
+            "uid": "yd6szrcnsbsciw42gdlr",
+            "from": 491,
+            "to": 495,
+            "value": "0.25"
+          }
+        ],
+        "ranges": {
+          "sojcbczrzoq51y80ki7zs8": {
+            "start": "2.50",
+            "end": "10.00",
+            "count": "4",
+            "type": "Float"
+          },
+          "s057vcr6xe6pnv7d3m36t": {
+            "start": "3.50",
+            "end": "14.00",
+            "count": "4",
+            "type": "Float"
+          },
+          "yd6szrcnsbsciw42gdlr": {
+            "start": "0.25",
+            "end": "1.00",
+            "count": "4",
+            "type": "Float"
+          }
+        }
+      },
+      "cellSize": 200,
+      "showLabels": false
+    },
+    {
+      "id": "3",
+      "parentId": "2",
+      "timestamp": "2025-12-22T22:19:25.788Z",
+      "time": "12/22/2025, 5:19:25 PM",
+      "name": "Animated",
+      "code": "#version 300 es\nprecision highp float;\nuniform float uTime;\nin  vec3 vPos;\nout vec4 fragColor;\n\nvoid main() {\n   float t = uTime / 2.;\n   fragColor = vec4(0.,0.,0.,1.);\n   float r = .3 + .2 * sin(4. * t);\n   float x = vPos.x + .5 * sin(5. * t);\n   float y = vPos.y + .5 * cos(7. * t);\n   float z = sqrt(r * r - x * x - y* y);\n   vec3 p = vec3(x, y, z);\n   if (p.z > 0.) {\n     vec3 direction = vec3(1., 1., 1.);\n     float diffuse = 0.6 * max(0.,dot(direction, p));\n     fragColor = vec4(vec3(diffuse), 1.);\n   }\n}",
+      "params": {
+        "definitions": [
+          {
+            "uid": "sojcbczrzoq51y80ki7zs8",
+            "from": 236,
+            "to": 238,
+            "value": "5."
+          },
+          {
+            "uid": "s057vcr6xe6pnv7d3m36t",
+            "from": 276,
+            "to": 278,
+            "value": "7."
+          }
+        ],
+        "ranges": {
+          "sojcbczrzoq51y80ki7zs8": {
+            "start": "2.50",
+            "end": "10.00",
+            "count": "4",
+            "type": "Float"
+          },
+          "s057vcr6xe6pnv7d3m36t": {
+            "start": "3.50",
+            "end": "14.00",
+            "count": "4",
+            "type": "Float"
+          }
+        }
+      },
+      "cellSize": 200
+    },
+    {
+      "id": "2",
+      "parentId": "1",
+      "timestamp": "2025-12-22T22:13:51.697Z",
+      "time": "12/22/2025, 5:13:51 PM",
+      "name": "Static",
+      "code": "#version 300 es\nprecision highp float;\nuniform float uTime;\nin  vec3 vPos;\nout vec4 fragColor;\n\nvoid main() {\n   float d = dot(vPos, vPos);\n   fragColor = vec4(0.,0.,0.,1.);\n   if (d < 0.60) {\n     vec3 direction = vec3(1., 1., 1.);\n     vec3 p = vec3(vPos.xy, sqrt(1. - d));\n     float diffuse = 0.47 * max(0.,dot(direction, p));\n     fragColor = vec4(vec3(diffuse), 1.);\n   }\n}",
+      "params": {
+        "definitions": [
+          {
+            "uid": "1k9r04o0zpi10jtpkhlie9m",
+            "from": 185,
+            "to": 189,
+            "value": "0.60"
+          },
+          {
+            "uid": "o8inhsmszxpeeh44dk7bap",
+            "from": 297,
+            "to": 301,
+            "value": "0.47"
+          }
+        ],
+        "ranges": {
+          "o8inhsmszxpeeh44dk7bap": {
+            "start": "0.2",
+            "end": "1",
+            "count": "4",
+            "type": "Float"
+          },
+          "1k9r04o0zpi10jtpkhlie9m": {
+            "start": ".2",
+            "end": "0.8",
+            "count": "4",
+            "type": "Float"
+          }
+        }
+      },
+      "cellSize": 200
+    },
+    {
+      "id": "1",
+      "parentId": "0",
+      "timestamp": "2025-12-22T05:06:53.959Z",
+      "time": "12/22/2025, 12:06:53 AM",
+      "name": "Gradient",
+      "code": "#version 300 es\nprecision highp float;\nuniform float uTime;\nin  vec3 vPos;\nout vec4 fragColor;\n\nvoid main() {\n   fragColor = vec4(0.,0.,0.,1.);\n   float d = dot(vPos, vPos);\n   if(d < .8) {\n     float z = 1. - sqrt(1. - d);\n     fragColor = vec4(z * .5, 0., z, 1.);\n   }\n}",
+      "cellSize": 200
+    },
+    {
+      "id": "0",
+      "parentId": null,
+      "timestamp": "2025-12-22T05:05:46.209Z",
+      "time": "12/22/2025, 12:05:46 AM",
+      "name": "Circle",
+      "code": "#version 300 es\nprecision highp float;\nuniform float uTime;\nin  vec3 vPos;\nout vec4 fragColor;\n\nvoid main() {\n   fragColor = vec4(0.,0.,0.,1.);\n   float d = dot(vPos, vPos);\n   if(d < .8) fragColor = vec4(0.5, 0., 0., 1.);\n}",
+      "cellSize": 200
+    }
+  ],
+  "selectedVersion": "6",
+  "nextVersionId": 7
+}

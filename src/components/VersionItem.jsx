@@ -1,9 +1,9 @@
 import {forwardRef, useState, useRef, useEffect} from "react";
-import {Sketch} from "./Sketch.jsx";
+import {Thumbnail} from "./Thumbnail.jsx";
 import {clsx} from "../clsx.js";
 
 export const VersionItem = forwardRef(function VersionItem(
-  {version, isCurrent, width, onLoad, onDelete, onSaveName},
+  {version, isCurrent, width, sketchType = "p5", onLoad, onDelete, onSaveName},
   ref
 ) {
   const [isEditing, setIsEditing] = useState(false);
@@ -56,7 +56,7 @@ export const VersionItem = forwardRef(function VersionItem(
       title={version.code.substring(0, 50) + "..."}
     >
       <div onClick={() => onLoad(version)} className="w-full relative sketch-container">
-        <Sketch code={version.code} width={width} />
+        <Thumbnail code={version.code} width={width} sketchType={sketchType} />
       </div>
       <div className="px-2 py-1 text-xs text-gray-500 cursor-text hover:bg-gray-100 rounded text-center" onClick={handleClick}>
         {isEditing ? (
@@ -76,7 +76,7 @@ export const VersionItem = forwardRef(function VersionItem(
       </div>
       <button
         onClick={(e) => onDelete(version.id, e)}
-        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1.5 bg-white hover:bg-red-100 rounded shadow-sm transition-opacity"
+        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1.5 bg-white hover:bg-red-100 rounded shadow-sm transition-opacity cursor-pointer"
         title="Delete version"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

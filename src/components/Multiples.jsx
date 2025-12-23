@@ -1,5 +1,6 @@
 import {useMemo, useState, useEffect, useRef, useCallback} from "react";
 import {Sketch} from "./Sketch.jsx";
+import {WebGL2MultiplesRenderer} from "./WebGL2MultiplesRenderer.jsx";
 import * as d3 from "d3";
 
 function replaceValues(V, code, params) {
@@ -95,16 +96,24 @@ function generateXd(code, params, ranges, {count = 4} = {}) {
   const V1 = generateVariations(params[1].value, count, ranges[getParamKey(params[1])]);
   const V = d3.cross(V0, V1);
   const [, , ...Vs] = params;
+  const totalItems = count ** 2;
+
+  // For additional params, generate variations based on their own count,
+  // then repeat cyclically to match the total number of combinations
   const restV = Vs.map((v) => {
     const key = getParamKey(v);
     const range = ranges[key];
-    // For additional params, generate count ** 2 variations
-    // Preserve the range settings (start, end, type) but override count
-    const modifiedRange = range ? {...range, count: String(count ** 2)} : null;
-    const values = generateVariations(v.value, count ** 2, modifiedRange);
-    return values;
+    // Generate variations based on the param's own count (not count ** 2)
+    const values = generateVariations(v.value, count, range);
+
+    // Repeat values cyclically to match totalItems
+    const repeatedValues = [];
+    for (let i = 0; i < totalItems; i++) {
+      repeatedValues.push(values[i % values.length]);
+    }
+    return repeatedValues;
   });
-  const totalItems = count ** 2;
+
   for (let i = 0; i < totalItems; i++) {
     V[i].push(...restV.map((values) => values[i]));
   }
@@ -141,6 +150,8 @@ export function Multiples({
   onRangesChange,
   cellSize: initialCellSize = 200,
   onCellSizeChange,
+  showLabels: initialShowLabels = true,
+  onShowLabelsChange,
   sketchType = "p5",
   onSelect,
   sketchId,
@@ -149,6 +160,7 @@ export function Multiples({
   const cols = 4;
   const [sketchSize, setSketchSize] = useState(initialCellSize);
   const [sliderValue, setSliderValue] = useState(initialCellSize);
+  const [showLabels, setShowLabels] = useState(initialShowLabels);
   const skipNotificationRef = useRef(false);
   const prevInitialRangesRef = useRef(JSON.stringify(initialRanges));
   const debounceTimeoutRef = useRef(null);
@@ -158,6 +170,11 @@ export function Multiples({
     setSketchSize(initialCellSize);
     setSliderValue(initialCellSize);
   }, [initialCellSize]);
+
+  // Update showLabels when initialShowLabels changes (e.g., when loading a version)
+  useEffect(() => {
+    setShowLabels(initialShowLabels);
+  }, [initialShowLabels]);
 
   // Debounced function to update sketch size
   const debouncedSetSketchSize = useCallback(
@@ -301,6 +318,10 @@ export function Multiples({
     return Array.from({length: n}, (_, i) => multiples.slice(i * columnCount, (i + 1) * columnCount));
   }, [multiples, columnCount]);
 
+  // Detect WebGL code by checking if code starts with #version
+  const isWebGLCode = code?.trim().startsWith("#version");
+  const isWebGL = sketchType === "webgl2" || isWebGLCode;
+
   if (params.length === 0) {
     return (
       <div className="text-gray-500">
@@ -312,19 +333,35 @@ export function Multiples({
   return (
     <div>
       <div className="mb-4">
-        <label className="flex items-center gap-2 text-xs">
-          <span>Cell Size:</span>
-          <input
-            type="range"
-            min="50"
-            max="400"
-            step="10"
-            value={sliderValue}
-            onChange={(e) => debouncedSetSketchSize(parseInt(e.target.value, 10))}
-            className="w-[200px]"
-          />
-          <span className="w-12 text-right">{sliderValue}px</span>
-        </label>
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 text-xs">
+            <span>Cell Size:</span>
+            <input
+              type="range"
+              min="25"
+              max="400"
+              step="10"
+              value={sliderValue}
+              onChange={(e) => debouncedSetSketchSize(parseInt(e.target.value, 10))}
+              className="w-[200px]"
+            />
+            <span className="w-12 text-right">{sliderValue}px</span>
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={showLabels}
+              onChange={(e) => {
+                const newValue = e.target.checked;
+                setShowLabels(newValue);
+                if (onShowLabelsChange) {
+                  onShowLabelsChange(newValue);
+                }
+              }}
+            />
+            <span>Label</span>
+          </label>
+        </div>
       </div>
       <div className="space-y-2 my-2">
         {params.map((param, i) => {
@@ -384,40 +421,80 @@ export function Multiples({
           );
         })}
       </div>
-      {params.length === 1 ? (
+      {isWebGL ? (
+        // Use single WebGL context for WebGL sketches
+        <div className="py-3">
+          <div className="relative" style={{width: `${columnCount * sketchSize}px`}}>
+            <WebGL2MultiplesRenderer
+              multiples={multiples}
+              cellSize={sketchSize}
+              columnCount={columnCount}
+              showLabels={showLabels}
+              onSelect={onSelect}
+            />
+          </div>
+        </div>
+      ) : params.length === 1 ? (
         // Flexbox layout for single param
-        <div className="flex flex-wrap gap-6 py-3">
+        <div
+          className="flex flex-wrap"
+          style={{
+            gap: showLabels ? "24px" : "0",
+            paddingTop: showLabels ? "12px" : "0",
+            paddingBottom: showLabels ? "12px" : "0",
+          }}
+        >
           {multiples.map((multiple, i) => (
             <div
               key={i}
               className="cursor-pointer hover:opacity-80 transition-opacity"
-              style={{width: `${sketchSize}px`, height: `${sketchSize}px`}}
+              style={{
+                width: `${sketchSize}px`,
+                height: `${sketchSize}px`,
+              }}
               onClick={() => onSelect(multiple)}
             >
               <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
-              <span className="text-xs whitespace-nowrap">{`(${multiple.values
-                .map((v, idx) => `X${idx}=${v}`)
-                .join(", ")})`}</span>
+              {showLabels && (
+                <span className="text-xs whitespace-nowrap">{`${multiple.values
+                  .map((v, idx) => `X${idx}=${v}`)
+                  .join(", ")}`}</span>
+              )}
             </div>
           ))}
         </div>
       ) : (
         // Grid layout for multiple params
         <div
-          className="grid gap-6 py-3"
-          style={{gridTemplateColumns: `repeat(${columnCount}, minmax(${sketchSize}px, 1fr))`}}
+          className="grid"
+          style={{
+            gridTemplateColumns: `repeat(${columnCount}, ${sketchSize}px)`,
+            gap: showLabels ? "24px" : "0",
+            paddingTop: showLabels ? "12px" : "0",
+            paddingBottom: showLabels ? "12px" : "0",
+            width: showLabels
+              ? `${columnCount * sketchSize + (columnCount - 1) * 24}px`
+              : `${columnCount * sketchSize}px`,
+          }}
         >
           {multiples.map((multiple, i) => (
             <div
               key={i}
               className="cursor-pointer hover:opacity-80 transition-opacity"
-              style={{width: `${sketchSize}px`, height: `${sketchSize}px`}}
+              style={{
+                width: `${sketchSize}px`,
+                height: `${sketchSize}px`,
+                margin: "0",
+                padding: "0",
+              }}
               onClick={() => onSelect(multiple)}
             >
               <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
-              <span className="text-xs whitespace-nowrap">{`(${multiple.values
-                .map((v, idx) => `X${idx}=${v}`)
-                .join(", ")})`}</span>
+              {showLabels && (
+                <span className="text-xs whitespace-nowrap">{`${multiple.values
+                  .map((v, idx) => `X${idx}=${v}`)
+                  .join(", ")}`}</span>
+              )}
             </div>
           ))}
         </div>

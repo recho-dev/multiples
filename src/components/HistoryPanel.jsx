@@ -2,7 +2,7 @@ import {forwardRef, useEffect, useRef} from "react";
 import {VersionItem} from "./VersionItem.jsx";
 
 export const HistoryPanel = forwardRef(function HistoryPanel(
-  {versions, currentVersionId, sidebarWidth, onLoadVersion, onDeleteVersion, onSaveVersionName, onWhiteboardClick},
+  {versions, currentVersionId, sidebarWidth, sketchType = "p5", onLoadVersion, onDeleteVersion, onSaveVersionName, onWhiteboardClick},
   ref
 ) {
   const versionItemRefs = useRef({});
@@ -33,7 +33,7 @@ export const HistoryPanel = forwardRef(function HistoryPanel(
         {versions.length > 0 && (
           <button
             onClick={onWhiteboardClick}
-            className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+            className="p-1.5 hover:bg-gray-100 rounded transition-colors cursor-pointer"
             title="Open Whiteboard"
           >
             <svg
@@ -81,6 +81,7 @@ export const HistoryPanel = forwardRef(function HistoryPanel(
                 version={version}
                 isCurrent={currentVersionId === version.id}
                 width={sidebarWidth}
+                sketchType={sketchType}
                 onLoad={onLoadVersion}
                 onDelete={onDeleteVersion}
                 onSaveName={onSaveVersionName}
