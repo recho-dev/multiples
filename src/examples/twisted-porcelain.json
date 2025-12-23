@@ -1,0 +1,50 @@
+{
+  "id": "hft1vywpm3w6ka81ql8ytt",
+  "name": "Twisted Porcelain",
+  "type": "webgl2",
+  "timestamp": "2025-12-23T16:46:01.875Z",
+  "versions": [
+    {
+      "id": "0",
+      "parentId": null,
+      "timestamp": "2025-12-23T16:57:20.480Z",
+      "time": "12/23/2025, 11:57:20 AM",
+      "name": "4x4",
+      "code": "#version 300 es\nprecision highp float;\nuniform float uTime;\nin  vec3 vPos;\nout vec4 fragColor;\n\nfloat turbulence(vec3 P) {\n   float f = 0., s = 1.;\n   for (int i = 0 ; i < 8 ; i++) {\n      f += abs(noise(s * P)) / s;\n      s *= 2.;\n      P = vec3(.866*P.x + .5*P.z, P.y + 100., -.5*P.x + .866*P.z);\n   }\n   return f;\n}\n\nvoid main() {\n   fragColor = vec4(0., 0., 0., 1.0);\n   float x = vPos.x * 2.;\n   float y = vPos.y * 2.;\n   vec3 loop = vec3(sin(uTime), cos(uTime), 0.);\n   float r = 1. + .5 * noise(vec3(x,y,0.)+loop);\n   float z = sqrt(r * r - x*x - y*y);\n   float cR = cos(.2*uTime), sR = sin(.2*uTime);    \n   float cV = cos(.1*uTime), sV = sin(.1*uTime);\n   vec3 P = vec3(cR*x+sR*z+cV,y,-sR*x+cR*z+sV);\n   if (z > .0) {\n     float d = .1 + .5 * max(0., x + y + z);\n     float f = (.5 +.5 * sin((x*x + y*y) * 5. + turbulence(P) * 12.));\n     vec3 c = vec3(d) * vec3(f*f, f, 1.);\n     fragColor = vec4(sqrt(c), 1.);\n   }\n}",
+      "params": {
+        "definitions": [
+          {
+            "uid": "96h74hyd4yle6e72o288k",
+            "from": 491,
+            "to": 493,
+            "value": ".5"
+          },
+          {
+            "uid": "vgzlbrp36tfu0tt6wbco3",
+            "from": 836,
+            "to": 839,
+            "value": "12."
+          }
+        ],
+        "ranges": {
+          "96h74hyd4yle6e72o288k": {
+            "start": "0.25",
+            "end": "1.00",
+            "count": "4",
+            "type": "Float"
+          },
+          "vgzlbrp36tfu0tt6wbco3": {
+            "start": "6.00",
+            "end": "24.00",
+            "count": "4",
+            "type": "Float"
+          }
+        }
+      },
+      "cellSize": 200,
+      "showLabels": false
+    }
+  ],
+  "selectedVersion": "0",
+  "nextVersionId": 2
+}

@@ -1,23 +1,5 @@
 import {useEffect, useRef} from "react";
-
-const noiseShader = `
-vec3  _s(vec3 i) { return cos(5.*(i+5.*cos(5.*(i.yzx+5.*cos(5.*(i.zxy+5.*cos(5.*i))))))); }
-float _t(vec3 i, vec3 u, vec3 a) { return dot(normalize(_s(i + a)), u - a); }
-float noise(vec3 p) {
-   vec3 i = floor(p), u = p - i, v = 2.*mix(u*u, u*(2.-u)-.5, step(.5,u));
-   return mix(mix(mix(_t(i, u, vec3(0.,0.,0.)), _t(i, u, vec3(1.,0.,0.)), v.x),
-                  mix(_t(i, u, vec3(0.,1.,0.)), _t(i, u, vec3(1.,1.,0.)), v.x), v.y),
-              mix(mix(_t(i, u, vec3(0.,0.,1.)), _t(i, u, vec3(1.,0.,1.)), v.x),
-                  mix(_t(i, u, vec3(0.,1.,1.)), _t(i, u, vec3(1.,1.,1.)), v.x), v.y), v.z);
-}`;
-
-const defaultVertexShader = `#version 300 es
-in  vec3 aPos;
-out vec3 vPos;
-void main() {
-   gl_Position = vec4(aPos, 1.);
-   vPos = aPos;
-}`;
+import {prepareFragmentShader, defaultVertexShader} from "../utils/shaderUtils.js";
 
 function setUniform(gl, type, name, a, b, c) {
   gl["uniform" + type](gl.getUniformLocation(gl.program, name), a, b, c);
@@ -65,18 +47,10 @@ function glStart(canvas, vertexShader, fragmentShader) {
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
   };
 
-  // Combine noise shader with fragment shader if it contains noise function
-  let finalFragmentShader = fragmentShader;
-  if (fragmentShader.includes("noise(") && !fragmentShader.includes("vec3  _s")) {
-    // Insert noise shader before main()
-    const mainIndex = finalFragmentShader.indexOf("void main()");
-    if (mainIndex !== -1) {
-      finalFragmentShader =
-        finalFragmentShader.slice(0, mainIndex) + noiseShader + "\n" + finalFragmentShader.slice(mainIndex);
-    }
-  }
+  // Prepare fragment shader (inject noise code if needed)
+  const finalFragmentShader = prepareFragmentShader(fragmentShader);
 
-  canvas.setShaders(vertexShader.trim(), finalFragmentShader.trim());
+  canvas.setShaders(vertexShader.trim(), finalFragmentShader);
 
   let startTime = Date.now() / 1000;
   let animationFrameId;
