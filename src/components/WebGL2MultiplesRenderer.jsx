@@ -125,7 +125,7 @@ export function WebGL2MultiplesRenderer({multiples, cellSize, columnCount, showL
         label.style.top = `${cellY + cellSize}px`;
         label.style.width = `${cellSize}px`;
         label.style.pointerEvents = "none";
-        label.textContent = `(${multiple.values.map((v, idx) => `X${idx}=${v}`).join(", ")})`;
+        label.textContent = `${multiple.values.map((v, idx) => `X${idx}=${v}`).join(", ")}`;
         labelsContainer.appendChild(label);
       });
     }

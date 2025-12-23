@@ -456,9 +456,9 @@ export function Multiples({
             >
               <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
               {showLabels && (
-                <span className="text-xs whitespace-nowrap">{`(${multiple.values
+                <span className="text-xs whitespace-nowrap">{`${multiple.values
                   .map((v, idx) => `X${idx}=${v}`)
-                  .join(", ")})`}</span>
+                  .join(", ")}`}</span>
               )}
             </div>
           ))}
@@ -491,9 +491,9 @@ export function Multiples({
             >
               <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
               {showLabels && (
-                <span className="text-xs whitespace-nowrap">{`(${multiple.values
+                <span className="text-xs whitespace-nowrap">{`${multiple.values
                   .map((v, idx) => `X${idx}=${v}`)
-                  .join(", ")})`}</span>
+                  .join(", ")}`}</span>
               )}
             </div>
           ))}
