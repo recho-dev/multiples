@@ -156,6 +156,8 @@ export function Multiples({
   onSelect,
   sketchId,
   currentVersionId,
+  isFocusMode = false,
+  hideVisualization = false,
 }) {
   const cols = 4;
   const [sketchSize, setSketchSize] = useState(initialCellSize);
@@ -332,172 +334,180 @@ export function Multiples({
 
   return (
     <div>
-      <div className="mb-4">
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-xs">
-            <span>Cell Size:</span>
-            <input
-              type="range"
-              min="25"
-              max="400"
-              step="10"
-              value={sliderValue}
-              onChange={(e) => debouncedSetSketchSize(parseInt(e.target.value, 10))}
-              className="w-[200px]"
-            />
-            <span className="w-12 text-right">{sliderValue}px</span>
-          </label>
-          <label className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={showLabels}
-              onChange={(e) => {
-                const newValue = e.target.checked;
-                setShowLabels(newValue);
-                if (onShowLabelsChange) {
-                  onShowLabelsChange(newValue);
-                }
-              }}
-            />
-            <span>Label</span>
-          </label>
-        </div>
-      </div>
-      <div className="space-y-2 my-2">
-        {params.map((param, i) => {
-          const paramKey = getParamKey(param);
-          const range = ranges[paramKey] || {start: "0", end: "100", count: "4", type: "Float"};
-          return (
-            <div
-              key={`${sketchId || "new"}-${currentVersionId || "none"}-${i}-${paramKey}`}
-              className="flex items-center gap-4 text-xs"
-            >
-              <span className="w-8 mr-6">
-                X{i}={param.value}
-              </span>
-              <label className="flex items-center gap-1">
-                <span>type</span>
-                <select
-                  value={range.type || "Float"}
-                  onChange={(e) => updateRange(paramKey, "type", e.target.value)}
-                  className="w-16 px-1 py-0.5 border border-gray-300 rounded text-xs"
-                >
-                  <option value="Float">Float</option>
-                  <option value="Int">Int</option>
-                </select>
-              </label>
-              <label className="flex items-center gap-1">
-                <span>start</span>
+      {!isFocusMode && (
+        <>
+          <div className="mb-4">
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-xs">
+                <span>Cell Size:</span>
                 <input
-                  type="number"
-                  step={range.type === "Int" ? "1" : "any"}
-                  value={range.start}
-                  onChange={(e) => updateRange(paramKey, "start", e.target.value)}
-                  className="w-20 px-1 py-0.5 border border-gray-300 rounded text-xs"
+                  type="range"
+                  min="25"
+                  max="400"
+                  step="10"
+                  value={sliderValue}
+                  onChange={(e) => debouncedSetSketchSize(parseInt(e.target.value, 10))}
+                  className="w-[200px]"
                 />
+                <span className="w-12 text-right">{sliderValue}px</span>
               </label>
-              <label className="flex items-center gap-1">
-                <span>end</span>
+              <label className="flex items-center gap-2 text-xs">
                 <input
-                  type="number"
-                  step={range.type === "Int" ? "1" : "any"}
-                  value={range.end}
-                  onChange={(e) => updateRange(paramKey, "end", e.target.value)}
-                  className="w-20 px-1 py-0.5 border border-gray-300 rounded text-xs"
+                  type="checkbox"
+                  checked={showLabels}
+                  onChange={(e) => {
+                    const newValue = e.target.checked;
+                    setShowLabels(newValue);
+                    if (onShowLabelsChange) {
+                      onShowLabelsChange(newValue);
+                    }
+                  }}
                 />
-              </label>
-              <label className="flex items-center gap-1">
-                <span>count</span>
-                <input
-                  type="number"
-                  step="1"
-                  min="1"
-                  value={range.count}
-                  onChange={(e) => updateRange(paramKey, "count", e.target.value)}
-                  className="w-20 px-1 py-0.5 border border-gray-300 rounded text-xs"
-                />
+                <span>Label</span>
               </label>
             </div>
-          );
-        })}
-      </div>
-      {isWebGL ? (
-        // Use single WebGL context for WebGL sketches
-        <div className="py-3">
-          <div className="relative" style={{width: `${columnCount * sketchSize}px`}}>
-            <WebGL2MultiplesRenderer
-              multiples={multiples}
-              cellSize={sketchSize}
-              columnCount={columnCount}
-              showLabels={showLabels}
-              onSelect={onSelect}
-            />
           </div>
-        </div>
-      ) : params.length === 1 ? (
-        // Flexbox layout for single param
-        <div
-          className="flex flex-wrap"
-          style={{
-            gap: showLabels ? "24px" : "0",
-            paddingTop: showLabels ? "12px" : "0",
-            paddingBottom: showLabels ? "12px" : "0",
-          }}
-        >
-          {multiples.map((multiple, i) => (
-            <div
-              key={i}
-              className="cursor-pointer hover:opacity-80 transition-opacity"
-              style={{
-                width: `${sketchSize}px`,
-                height: `${sketchSize}px`,
-              }}
-              onClick={() => onSelect(multiple)}
-            >
-              <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
-              {showLabels && (
-                <span className="text-xs whitespace-nowrap">{`${multiple.values
-                  .map((v, idx) => `X${idx}=${v}`)
-                  .join(", ")}`}</span>
-              )}
+          <div className="space-y-2 my-2">
+            {params.map((param, i) => {
+              const paramKey = getParamKey(param);
+              const range = ranges[paramKey] || {start: "0", end: "100", count: "4", type: "Float"};
+              return (
+                <div
+                  key={`${sketchId || "new"}-${currentVersionId || "none"}-${i}-${paramKey}`}
+                  className="flex items-center gap-4 text-xs"
+                >
+                  <span className="w-8 mr-6">
+                    X{i}={param.value}
+                  </span>
+                  <label className="flex items-center gap-1">
+                    <span>type</span>
+                    <select
+                      value={range.type || "Float"}
+                      onChange={(e) => updateRange(paramKey, "type", e.target.value)}
+                      className="w-16 px-1 py-0.5 border border-gray-300 rounded text-xs"
+                    >
+                      <option value="Float">Float</option>
+                      <option value="Int">Int</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <span>start</span>
+                    <input
+                      type="number"
+                      step={range.type === "Int" ? "1" : "any"}
+                      value={range.start}
+                      onChange={(e) => updateRange(paramKey, "start", e.target.value)}
+                      className="w-20 px-1 py-0.5 border border-gray-300 rounded text-xs"
+                    />
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <span>end</span>
+                    <input
+                      type="number"
+                      step={range.type === "Int" ? "1" : "any"}
+                      value={range.end}
+                      onChange={(e) => updateRange(paramKey, "end", e.target.value)}
+                      className="w-20 px-1 py-0.5 border border-gray-300 rounded text-xs"
+                    />
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <span>count</span>
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      value={range.count}
+                      onChange={(e) => updateRange(paramKey, "count", e.target.value)}
+                      className="w-20 px-1 py-0.5 border border-gray-300 rounded text-xs"
+                    />
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+      {!hideVisualization && (
+        <>
+          {isWebGL ? (
+            // Use single WebGL context for WebGL sketches
+            <div className="py-3">
+              <div className="relative" style={{width: `${columnCount * sketchSize}px`}}>
+                <WebGL2MultiplesRenderer
+                  multiples={multiples}
+                  cellSize={sketchSize}
+                  columnCount={columnCount}
+                  showLabels={showLabels}
+                  onSelect={onSelect}
+                />
+              </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        // Grid layout for multiple params
-        <div
-          className="grid"
-          style={{
-            gridTemplateColumns: `repeat(${columnCount}, ${sketchSize}px)`,
-            gap: showLabels ? "24px" : "0",
-            paddingTop: showLabels ? "12px" : "0",
-            paddingBottom: showLabels ? "12px" : "0",
-            width: showLabels
-              ? `${columnCount * sketchSize + (columnCount - 1) * 24}px`
-              : `${columnCount * sketchSize}px`,
-          }}
-        >
-          {multiples.map((multiple, i) => (
+          ) : params.length === 1 ? (
+            // Flexbox layout for single param
             <div
-              key={i}
-              className="cursor-pointer hover:opacity-80 transition-opacity"
+              className="flex flex-wrap"
               style={{
-                width: `${sketchSize}px`,
-                height: `${sketchSize}px`,
-                margin: "0",
-                padding: "0",
+                gap: showLabels ? "24px" : "0",
+                paddingTop: showLabels ? "12px" : "0",
+                paddingBottom: showLabels ? "12px" : "0",
               }}
-              onClick={() => onSelect(multiple)}
             >
-              <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
-              {showLabels && (
-                <span className="text-xs whitespace-nowrap">{`${multiple.values
-                  .map((v, idx) => `X${idx}=${v}`)
-                  .join(", ")}`}</span>
-              )}
+              {multiples.map((multiple, i) => (
+                <div
+                  key={i}
+                  className={onSelect ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}
+                  style={{
+                    width: `${sketchSize}px`,
+                    height: `${sketchSize}px`,
+                  }}
+                  onClick={onSelect ? () => onSelect(multiple) : undefined}
+                >
+                  <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
+                  {showLabels && (
+                    <span className="text-xs whitespace-nowrap">{`${multiple.values
+                      .map((v, idx) => `X${idx}=${v}`)
+                      .join(", ")}`}</span>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          ) : (
+            // Grid layout for multiple params
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: `repeat(${columnCount}, ${sketchSize}px)`,
+                gap: showLabels ? "24px" : "0",
+                paddingTop: showLabels ? "12px" : "0",
+                paddingBottom: showLabels ? "12px" : "0",
+                width: showLabels
+                  ? `${columnCount * sketchSize + (columnCount - 1) * 24}px`
+                  : `${columnCount * sketchSize}px`,
+              }}
+            >
+              {multiples.map((multiple, i) => (
+                <div
+                  key={i}
+                  className={onSelect ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}
+                  style={{
+                    width: `${sketchSize}px`,
+                    height: `${sketchSize}px`,
+                    margin: "0",
+                    padding: "0",
+                  }}
+                  onClick={onSelect ? () => onSelect(multiple) : undefined}
+                >
+                  <Sketch code={multiple.code} width={sketchSize} height={sketchSize} sketchType={sketchType} />
+                  {showLabels && (
+                    <span className="text-xs whitespace-nowrap">{`${multiple.values
+                      .map((v, idx) => `X${idx}=${v}`)
+                      .join(", ")}`}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
