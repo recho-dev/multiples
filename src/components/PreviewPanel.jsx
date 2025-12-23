@@ -67,7 +67,7 @@ export function PreviewPanel({
             className={clsx("cursor-pointer", !showMultiples && "border-b-1")}
             onClick={() => onToggleMultiples(false)}
           >
-            Preview
+            Canvas
           </span>
           {!showMultiples && (
             <button
