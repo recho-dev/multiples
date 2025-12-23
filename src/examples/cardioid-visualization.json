@@ -10,7 +10,7 @@
       "timestamp": "2025-12-22T04:29:49.966Z",
       "time": "12/21/2025, 11:29:49 PM",
       "name": "Dark Theme (3x4)",
-      "code": "const n = 100;\nconst m = 2;\n\np.setup = () => {\n  const size = 600;\n  const step = p.TWO_PI / n;\n  const d = size - 10;\n  const r = d / 2;\n  p.createCanvas(size, size);\n  p.background(0);\n  p.noFill();\n  p.stroke(255);\n  p.circle(p.width / 2, p.height / 2, d);\n  p.translate(p.width / 2, p.height / 2);\n  for(let i = 0; i < n; i++) {\n    const a = i * step;\n    const b = (i * m) % n * step;\n    const x = r * p.cos(a);\n    const y = r * p.sin(a);\n    const x1 = r * p.cos(b);\n    const y1 = r * p.sin(b);\n    p.line(x, y, x1, y1);\n  }\n};\n",
+      "code": "const n = 100;\nconst m = 2;\n\np.setup = () => {\n  const size = 600;\n  const step = p.TWO_PI / n;\n  const d = size - 100;\n  const r = d / 2;\n  p.createCanvas(size, size);\n  p.background(0);\n  p.noFill();\n  p.stroke(255);\n  p.circle(p.width / 2, p.height / 2, d);\n  p.translate(p.width / 2, p.height / 2);\n  for(let i = 0; i < n; i++) {\n    const a = i * step;\n    const b = (i * m) % n * step;\n    const x = r * p.cos(a);\n    const y = r * p.sin(a);\n    const x1 = r * p.cos(b);\n    const y1 = r * p.sin(b);\n    p.line(x, y, x1, y1);\n  }\n};\n",
       "params": {
         "definitions": [
           {
@@ -49,7 +49,7 @@
       "timestamp": "2025-12-22T04:27:56.772Z",
       "time": "12/21/2025, 11:27:56 PM",
       "name": "Light Theme (4x5)",
-      "code": "const n = 100;\nconst m = 2;\n\np.setup = () => {\n  const size = 600;\n  const step = p.TWO_PI / n;\n  const d = size - 10;\n  const r = d / 2;\n  p.createCanvas(size, size);\n  p.circle(p.width / 2, p.height / 2, d);\n  p.translate(p.width / 2, p.height / 2);\n  for(let i = 0; i < n; i++) {\n    const a = i * step;\n    const b = (i * m) % n * step;\n    const x = r * p.cos(a);\n    const y = r * p.sin(a);\n    const x1 = r * p.cos(b);\n    const y1 = r * p.sin(b);\n    p.line(x, y, x1, y1);\n  }\n};\n",
+      "code": "const n = 100;\nconst m = 2;\n\np.setup = () => {\n  const size = 600;\n  const step = p.TWO_PI / n;\n  const d = size - 100;\n  const r = d / 2;\n  p.createCanvas(size, size);\n  p.circle(p.width / 2, p.height / 2, d);\n  p.translate(p.width / 2, p.height / 2);\n  for(let i = 0; i < n; i++) {\n    const a = i * step;\n    const b = (i * m) % n * step;\n    const x = r * p.cos(a);\n    const y = r * p.sin(a);\n    const x1 = r * p.cos(b);\n    const y1 = r * p.sin(b);\n    p.line(x, y, x1, y1);\n  }\n};\n",
       "params": {
         "definitions": [
           {

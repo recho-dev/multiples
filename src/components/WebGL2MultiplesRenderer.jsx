@@ -255,8 +255,12 @@ export function WebGL2MultiplesRenderer({multiples, cellSize, columnCount, showL
       }
     };
 
-    canvas.addEventListener("click", handleClick);
-    canvas.style.cursor = "pointer";
+    if (onSelect) {
+      canvas.addEventListener("click", handleClick);
+      canvas.style.cursor = "pointer";
+    } else {
+      canvas.style.cursor = "default";
+    }
 
     // Start rendering
     startTimeRef.current = Date.now() / 1000;
