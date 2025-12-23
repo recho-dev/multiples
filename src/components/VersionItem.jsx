@@ -76,7 +76,7 @@ export const VersionItem = forwardRef(function VersionItem(
       </div>
       <button
         onClick={(e) => onDelete(version.id, e)}
-        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1.5 bg-white hover:bg-red-100 rounded shadow-sm transition-opacity"
+        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1.5 bg-white hover:bg-red-100 rounded shadow-sm transition-opacity cursor-pointer"
         title="Delete version"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

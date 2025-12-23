@@ -26,7 +26,7 @@ export function ExamplesModal({examples, onSelect, onClose}) {
           <h2 className="text-lg font-semibold">Examples</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
             title="Close"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -52,7 +52,7 @@ export function ExamplesModal({examples, onSelect, onClose}) {
                       <button
                         key={example.id}
                         onClick={() => onSelect(example)}
-                        className="p-2 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors text-left rounded flex flex-col"
+                        className="p-2 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors text-left rounded flex flex-col cursor-pointer"
                       >
                         {exampleEntry.img && (
                           <div className="mb-2 w-full aspect-square bg-gray-100 rounded overflow-hidden">

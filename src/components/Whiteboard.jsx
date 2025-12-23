@@ -327,7 +327,7 @@ export function Whiteboard({versions, onClose, onSelectVersion}) {
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2 pointer-events-auto">
         <button
           onClick={onClose}
-          className="px-4 py-2 bg-white hover:bg-gray-100 border border-gray-300 rounded shadow-sm transition-colors"
+          className="px-4 py-2 bg-white hover:bg-gray-100 border border-gray-300 rounded shadow-sm transition-colors cursor-pointer"
           onMouseDown={(e) => e.stopPropagation()}
         >
           Close Whiteboard
@@ -335,7 +335,7 @@ export function Whiteboard({versions, onClose, onSelectVersion}) {
         {selectedSketchId && (
           <button
             onClick={handleSelectVersion}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white border border-blue-700 rounded shadow-sm transition-colors"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white border border-blue-700 rounded shadow-sm transition-colors cursor-pointer"
             onMouseDown={(e) => e.stopPropagation()}
           >
             Open Selected Version

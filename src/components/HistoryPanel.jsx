@@ -33,7 +33,7 @@ export const HistoryPanel = forwardRef(function HistoryPanel(
         {versions.length > 0 && (
           <button
             onClick={onWhiteboardClick}
-            className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+            className="p-1.5 hover:bg-gray-100 rounded transition-colors cursor-pointer"
             title="Open Whiteboard"
           >
             <svg

@@ -11,7 +11,7 @@ export function OpenSketchModal({sketches, onSelect, onDelete, onClose}) {
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 cursor-pointer"
           title="Close"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -29,13 +29,13 @@ export function OpenSketchModal({sketches, onSelect, onDelete, onClose}) {
                 key={sketch.id}
                 className="w-full px-4 py-3 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-between group"
               >
-                <button onClick={() => onSelect(sketch)} className="flex-1 text-left">
+                <button onClick={() => onSelect(sketch)} className="flex-1 text-left cursor-pointer">
                   <div className="font-medium">{sketch.name}</div>
                   <div className="text-xs text-gray-500">{new Date(sketch.timestamp).toLocaleString()}</div>
                 </button>
                 <button
                   onClick={(e) => onDelete(sketch.id, e)}
-                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
+                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
                   title="Delete sketch"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
