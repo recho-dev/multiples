@@ -18,7 +18,7 @@ export function ExamplesModal({examples, onSelect, onClose}) {
       onClick={onClose}
     >
       <div
-        className="bg-white max-w-6xl w-full mx-4 relative max-h-[90vh] flex flex-col"
+        className="bg-gray-50 max-w-6xl w-full mx-4 relative max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Fixed Header */}
@@ -36,14 +36,15 @@ export function ExamplesModal({examples, onSelect, onClose}) {
           </button>
         </div>
         {/* Scrollable Content */}
-        <div className="overflow-y-auto flex-1 p-6">
+        <div className="overflow-y-auto flex-1 p-6 bg-gray-50">
           {examples.length === 0 ? (
             <p className="text-gray-500">No examples available</p>
           ) : (
             <div className="space-y-6">
-            {groups.map((group) => (
+            {groups.map((group, groupIndex) => (
               <div key={group}>
-                <h3 className="text-sm font-medium mb-2 text-gray-700 border-b border-gray-200 pb-1">{group}</h3>
+                {groupIndex > 0 && <div className="border-t border-gray-200 mb-6"></div>}
+                <h3 className="text-sm font-medium mb-2 text-gray-700">{group}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                   {groupedExamples[group].map((exampleEntry) => {
                     const example = exampleEntry.data;
