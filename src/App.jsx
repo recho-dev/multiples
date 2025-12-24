@@ -43,6 +43,7 @@ function SketchEditor() {
   const [availableSketches, setAvailableSketches] = useState([]);
   const [showExamplesModal, setShowExamplesModal] = useState(false);
   const [availableExamples, setAvailableExamples] = useState([]);
+  const [showWhiteboard, setShowWhiteboard] = useState(false);
   const lastLoadedSketchIdRef = useRef(null);
 
   // Load sketch from URL when id changes
@@ -334,15 +335,17 @@ function SketchEditor() {
 
   return (
     <div className="min-h-screen">
-      <Header
-        isFullscreen={isFullscreen}
-        onNewSketch={handleNewSketch}
-        onOpenSketch={handleOpenSketch}
-        onExamples={handleExamples}
-        onDownloadAll={handleDownloadAll}
-        hasVersions={savedVersions.length > 0}
-        onFullscreen={handleFullscreen}
-      />
+      {!showWhiteboard && (
+        <Header
+          isFullscreen={isFullscreen}
+          onNewSketch={handleNewSketch}
+          onOpenSketch={handleOpenSketch}
+          onExamples={handleExamples}
+          onDownloadAll={handleDownloadAll}
+          hasVersions={savedVersions.length > 0}
+          onFullscreen={handleFullscreen}
+        />
+      )}
       <Workspace
         sketchId={currentSketchId}
         sketchName={currentSketchName}
@@ -355,6 +358,7 @@ function SketchEditor() {
         onSketchNameChange={setCurrentSketchName}
         onVersionsChange={setSavedVersions}
         navigate={navigate}
+        onWhiteboardChange={setShowWhiteboard}
       />
       {showOpenModal && (
         <OpenSketchModal

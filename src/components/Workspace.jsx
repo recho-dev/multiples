@@ -70,6 +70,7 @@ export function Workspace({
   onSketchNameChange,
   onVersionsChange,
   navigate,
+  onWhiteboardChange,
 }) {
   const handleSaveName = useCallback(
     async (newName) => {
@@ -1081,11 +1082,13 @@ export function Workspace({
 
   const handleWhiteboardClick = useCallback(() => {
     setShowWhiteboard(true);
-  }, []);
+    onWhiteboardChange?.(true);
+  }, [onWhiteboardChange]);
 
   const handleCloseWhiteboard = useCallback(() => {
     setShowWhiteboard(false);
-  }, []);
+    onWhiteboardChange?.(false);
+  }, [onWhiteboardChange]);
 
   const handleToggleMultiples = useCallback((show) => {
     // When switching to multiples view, ensure multiplesCode and params are synced with editor
@@ -1123,13 +1126,14 @@ export function Workspace({
       pendingVersionToLoadRef.current = version;
       // Close whiteboard to reinitialize editor
       setShowWhiteboard(false);
+      onWhiteboardChange?.(false);
     },
-    [hasNewCodeToSave]
+    [hasNewCodeToSave, onWhiteboardChange]
   );
 
   if (showWhiteboard) {
     return (
-      <main className="h-[calc(100vh-50px)]">
+      <main className="h-screen">
         <Whiteboard
           versions={savedVersions}
           onClose={handleCloseWhiteboard}
